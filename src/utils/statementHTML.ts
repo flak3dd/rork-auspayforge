@@ -60,12 +60,12 @@ body {margin: 0;padding: 0;font-family: Helvetica, Arial, sans-serif;color: #1A1
 .logo-diamond {width: 32px;height: 32px;background-color: #FFCC00;transform: rotate(45deg);margin-top: 4px;flex-shrink:0;}
 .bank-details {font-size: 8.5pt;line-height: 1.1;}
 .statement-heading {color: #FFCC00;font-size: 32pt;font-weight: 400;margin: 0 0 10px 0;text-align: right;letter-spacing: -0.5pt;}
-.summary-table {width: 238px;border-collapse: collapse;font-size: 10pt;font-weight: 300;float: right;}
+.summary-table {width: 250px;border-collapse: collapse;font-size: 10pt;font-weight: 300;float: right;}
 .summary-table td {padding: 8px 0;border-top: 1.2pt solid #FFC523;}
 .summary-label {font-weight: bold;}
 .summary-value {text-align: right;}
-.sub-header {display: flex;justify-content: flex-end;padding: 20px 0;}
-.sub-header-box {width: 238px;}
+.sub-header {display: flex;justify-content: flex-end;padding: 8px 0;}
+.sub-header-box {width: 250px;}
 .sub-header-row {display: flex;justify-content: space-between;padding: 5px 0;border-bottom: 1pt solid #FFC523;font-size: 10.5pt;}
 .smart-access {font-size: 22pt;font-weight: 900;margin-top: 40px;}
 .yellow-divider {border-top: 1.8pt solid #FFC523;margin: 12px 0;}
@@ -133,7 +133,7 @@ ${logoImg}
 </div>
 </div>
 ${p === 1 ? barcodeImg : ''}
-<table class="transaction-table" style="margin-top:${(p === 1 && barcodeImg) ? '12' : '60'}px;">
+<table class="transaction-table" style="margin-top:${(p === 1 && barcodeImg) ? '8' : '12'}px;">
 <thead><tr><th>Date</th><th>Transaction</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead>
 <tbody>`;
     pageTxs.forEach(tx => { html += txRow(tx); });

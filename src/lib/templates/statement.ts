@@ -240,12 +240,12 @@ body {margin: 0;padding: 0;font-family: Helvetica, sans-serif;color: #1A1A1A;-we
 .logo {width: 42px;height: auto;margin-top: 4px;}
 .bank-details {font-size: 8.5pt;line-height: 1.1;}
 .statement-heading {color: #FFCC00;font-size: 32pt;font-weight: 400;margin: 0 0 10px 0;text-align: right;letter-spacing: -0.5pt;}
-.summary-table {width: 238px;border-collapse: collapse;font-size: 10pt;font-weight: 300;float: right;}
+.summary-table {width: 250px;border-collapse: collapse;font-size: 10pt;font-weight: 300;float: right;}
 .summary-table td {padding: 8px 0;border-top: 1.2pt solid #FFC523;}
 .summary-label {font-weight: bold;}
 .summary-value {text-align: right;}
-.sub-header {display: flex;justify-content: flex-end;padding: 20px 0;position: absolute;top: 12mm;right: 20mm;width: 224px;}
-.sub-header-box {width: 238px;}
+.sub-header {display: flex;justify-content: flex-end;padding: 8px 0;position: absolute;top: 12mm;right: 20mm;width: 250px;}
+.sub-header-box {width: 250px;}
 .sub-header-row {display: flex;justify-content: space-between;padding: 5px 0;border-bottom: 1pt solid #FFC523;font-size: 10.5pt;}
 .smart-access {font-size: 22pt;font-weight: 900;margin-top: 40px;}
 .yellow-divider {border-top: 1.8pt solid #FFC523;margin: 12px 0;}
@@ -339,10 +339,10 @@ for (let p = 2; p <= config.total_pages; p++) {
             <div class="sub-header-row"><span style="font-weight:600;">Account Number</span><span>${config.account_number}</span></div>
         </div>
     </div>`;
-  let tableTop = 37;
+  let tableTop = 32;
   if (p === 2) {
     html += ` <img src="assets/images/barcode.png" class="bar">`;
-    tableTop = 74;
+    tableTop = 69;
   }
   html += `
     <div class="table-container" style="top:${tableTop}mm">
