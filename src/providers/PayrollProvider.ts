@@ -12,6 +12,7 @@ import { generateBankStatement } from '@/utils/bankStatement';
 import { isConfigValid } from '@/utils/validation';
 import { generateGeneralPayslipHTML } from '@/lib/templates/generalPayslipTemplate';
 import { generateConstructionPayslipHTML } from '@/lib/templates/constructionPayslipTemplate';
+import { generateStatementHTML } from '@/utils/statementHTML';
 
 export type PayslipTemplateType = 'general' | 'construction';
 
@@ -29,6 +30,7 @@ export const [PayrollProvider, usePayroll] = createContextHook(() => {
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [payslipTemplate, setPayslipTemplate] = useState<PayslipTemplateType>('general');
   const [payslipHTMLs, setPayslipHTMLs] = useState<string[]>([]);
+  const [statementHTML, setStatementHTML] = useState<string>('');
 
   const validation = useMemo(() => isConfigValid(config), [config]);
 
@@ -72,6 +74,10 @@ export const [PayrollProvider, usePayroll] = createContextHook(() => {
       setPayslipHTMLs(htmls);
       console.log('[PayrollProvider] Generated', htmls.length, 'payslip HTML documents');
 
+      const stmtHTML = generateStatementHTML(bankStatement, config);
+      setStatementHTML(stmtHTML);
+      console.log('[PayrollProvider] Generated statement HTML');
+
       const result: GeneratedOutput = {
         payslips,
         bankStatement,
@@ -99,6 +105,7 @@ export const [PayrollProvider, usePayroll] = createContextHook(() => {
     setConfig(DEFAULT_CONFIG);
     setOutput(null);
     setPayslipHTMLs([]);
+    setStatementHTML('');
   }, []);
 
   return {
@@ -113,5 +120,6 @@ export const [PayrollProvider, usePayroll] = createContextHook(() => {
     payslipTemplate,
     setPayslipTemplate: regenerateHTMLs,
     payslipHTMLs,
+    statementHTML,
   };
 });

@@ -5,9 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Animated,
   Dimensions,
-  Platform,
 } from 'react-native';
 import { FileText, ChevronLeft, ChevronRight, Eye, HardHat, Briefcase } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
@@ -15,6 +13,7 @@ import { useRouter } from 'expo-router';
 import Colors from '@/constants/colors';
 import { usePayroll, PayslipTemplateType } from '@/providers/PayrollProvider';
 import PayslipCard from '@/components/PayslipCard';
+import HTMLRenderer from '@/components/HTMLRenderer';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -149,22 +148,13 @@ export default function PayslipsScreen() {
           ))}
         </ScrollView>
       ) : (
-        <ScrollView style={styles.htmlScroll} contentContainerStyle={styles.htmlContent}>
-          <View style={styles.htmlPreviewBox}>
-            <Text style={styles.htmlPreviewLabel}>HTML Payslip Preview (Period {activeIndex + 1})</Text>
-            <Text style={styles.htmlPreviewNote}>
-              {payslipTemplate === 'construction' ? 'Construction Industry' : 'General'} template applied.
-              Export to view the full formatted document.
-            </Text>
-            {payslipHTMLs[activeIndex] ? (
-              <View style={styles.htmlSnippet}>
-                <Text style={styles.htmlSnippetText} numberOfLines={20}>
-                  {payslipHTMLs[activeIndex].replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').slice(0, 800)}
-                </Text>
-              </View>
-            ) : null}
+        payslipHTMLs[activeIndex] ? (
+          <HTMLRenderer html={payslipHTMLs[activeIndex]} style={styles.htmlContainer} />
+        ) : (
+          <View style={styles.htmlEmptyBox}>
+            <Text style={styles.htmlEmptyText}>No HTML generated for this period</Text>
           </View>
-        </ScrollView>
+        )
       )}
 
       <View style={styles.bottomBar}>
@@ -308,44 +298,22 @@ const styles = StyleSheet.create({
   cardWrap: {
     paddingRight: 0,
   },
-  htmlScroll: {
+  htmlContainer: {
     flex: 1,
-  },
-  htmlContent: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  htmlPreviewBox: {
-    backgroundColor: Colors.card,
-    borderRadius: 14,
-    padding: 16,
+    margin: 8,
+    borderRadius: 10,
+    overflow: 'hidden',
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  htmlPreviewLabel: {
-    fontSize: 15,
-    fontWeight: '700' as const,
-    color: Colors.text,
-    marginBottom: 6,
+  htmlEmptyBox: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  htmlPreviewNote: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    lineHeight: 19,
-    marginBottom: 12,
-  },
-  htmlSnippet: {
-    backgroundColor: Colors.cardElevated,
-    borderRadius: 8,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  htmlSnippetText: {
-    fontSize: 11,
+  htmlEmptyText: {
+    fontSize: 14,
     color: Colors.textMuted,
-    lineHeight: 16,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
   bottomBar: {
     paddingHorizontal: 16,

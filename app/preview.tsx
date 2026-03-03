@@ -1,17 +1,16 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   Alert,
-  Platform,
 } from 'react-native';
-import { Share as ShareIcon, Printer, Download } from 'lucide-react-native';
+import { Share as ShareIcon, FileText, LayoutGrid } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { usePayroll } from '@/providers/PayrollProvider';
+import HTMLRenderer from '@/components/HTMLRenderer';
 
 function fmt(n: number): string {
   return n.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -22,7 +21,8 @@ function fmtDate(d: Date): string {
 }
 
 export default function PreviewScreen() {
-  const { output, config } = usePayroll();
+  const { output, statementHTML } = usePayroll();
+  const [viewMode, setViewMode] = useState<'html' | 'summary'>('html');
 
   const statement = output?.bankStatement;
 
@@ -35,7 +35,12 @@ export default function PreviewScreen() {
     );
   }, []);
 
-  if (!statement) {
+  const toggleView = useCallback(() => {
+    Haptics.selectionAsync();
+    setViewMode(prev => prev === 'html' ? 'summary' : 'html');
+  }, []);
+
+  if (!statement || !statementHTML) {
     return (
       <View style={styles.emptyContainer}>
         <Text style={styles.emptyTitle}>No Statement</Text>
@@ -44,96 +49,50 @@ export default function PreviewScreen() {
     );
   }
 
-  const visibleTxs = statement.transactions.slice(0, 80);
-
   return (
     <View style={styles.container}>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.statementHeader}>
-          <View style={styles.bankRow}>
-            <View style={styles.diamond} />
-            <View>
-              <Text style={styles.bankName}>Commonwealth Bank</Text>
-              <Text style={styles.bankSub}>ABN 48 123 123 124</Text>
+      <View style={styles.infoBar}>
+        <View style={styles.infoLeft}>
+          <Text style={styles.infoLabel}>{statement.accountHolder}</Text>
+          <Text style={styles.infoSub}>{statement.transactions.length} transactions · {statement.pages.length} pages</Text>
+        </View>
+        <TouchableOpacity style={styles.toggleBtn} onPress={toggleView} activeOpacity={0.7}>
+          {viewMode === 'html' ? (
+            <LayoutGrid size={16} color={Colors.accent} />
+          ) : (
+            <FileText size={16} color={Colors.accent} />
+          )}
+          <Text style={styles.toggleText}>{viewMode === 'html' ? 'Summary' : 'Document'}</Text>
+        </TouchableOpacity>
+      </View>
+
+      {viewMode === 'html' ? (
+        <HTMLRenderer html={statementHTML} style={styles.webviewContainer} />
+      ) : (
+        <View style={styles.summaryContainer}>
+          <View style={styles.summaryCard}>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Account</Text>
+              <Text style={styles.summaryValue}>{statement.bsb} {statement.accountNumber}</Text>
+            </View>
+            <View style={styles.divider} />
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Period</Text>
+              <Text style={styles.summaryValue}>{statement.statementPeriod}</Text>
+            </View>
+            <View style={styles.divider} />
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Opening Balance</Text>
+              <Text style={styles.summaryValue}>${fmt(statement.openingBalance)}</Text>
+            </View>
+            <View style={styles.divider} />
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Closing Balance</Text>
+              <Text style={[styles.summaryValue, styles.accentText]}>${fmt(statement.closingBalance)}</Text>
             </View>
           </View>
-          <Text style={styles.statementTitle}>Your Statement</Text>
         </View>
-
-        <View style={styles.summaryCard}>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Account Holder</Text>
-            <Text style={styles.summaryValue}>{statement.accountHolder}</Text>
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Account</Text>
-            <Text style={styles.summaryValue}>{statement.bsb} {statement.accountNumber}</Text>
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Period</Text>
-            <Text style={styles.summaryValue}>{statement.statementPeriod}</Text>
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Opening Balance</Text>
-            <Text style={[styles.summaryValue, styles.balanceText]}>${fmt(statement.openingBalance)}</Text>
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Closing Balance</Text>
-            <Text style={[styles.summaryValue, styles.balanceAccent]}>${fmt(statement.closingBalance)}</Text>
-          </View>
-        </View>
-
-        <View style={styles.txCountRow}>
-          <Text style={styles.txCount}>{statement.transactions.length} transactions</Text>
-          <Text style={styles.txPages}>{statement.pages.length} pages</Text>
-        </View>
-
-        <View style={styles.tableHeader}>
-          <Text style={[styles.thText, styles.dateCol]}>Date</Text>
-          <Text style={[styles.thText, styles.descCol]}>Transaction</Text>
-          <Text style={[styles.thText, styles.numCol]}>Debit</Text>
-          <Text style={[styles.thText, styles.numCol]}>Credit</Text>
-          <Text style={[styles.thText, styles.balCol]}>Balance</Text>
-        </View>
-
-        {visibleTxs.map((tx, i) => (
-          <View key={i} style={[styles.txRow, i % 2 === 0 && styles.txRowAlt]}>
-            <Text style={[styles.txCell, styles.dateCol]} numberOfLines={1}>
-              {fmtDate(tx.date)}
-            </Text>
-            <Text style={[styles.txCell, styles.descCol]} numberOfLines={2}>
-              {tx.description.replace(/\n/g, ' ')}
-            </Text>
-            <Text style={[styles.txCell, styles.numCol, tx.debit > 0 && styles.debitText]}>
-              {tx.debit > 0 ? fmt(tx.debit) : ''}
-            </Text>
-            <Text style={[styles.txCell, styles.numCol, tx.credit > 0 && styles.creditText]}>
-              {tx.credit > 0 ? fmt(tx.credit) : ''}
-            </Text>
-            <Text style={[styles.txCell, styles.balCol]}>
-              {fmt(tx.balance)}
-            </Text>
-          </View>
-        ))}
-
-        {statement.transactions.length > 80 && (
-          <View style={styles.moreBox}>
-            <Text style={styles.moreText}>
-              + {statement.transactions.length - 80} more transactions
-            </Text>
-          </View>
-        )}
-
-        <View style={styles.bottomPad} />
-      </ScrollView>
+      )}
 
       <View style={styles.bottomBar}>
         <TouchableOpacity
@@ -154,13 +113,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
-  scroll: {
-    flex: 1,
-  },
-  content: {
-    paddingHorizontal: 12,
-    paddingTop: 12,
-  },
   emptyContainer: {
     flex: 1,
     backgroundColor: Colors.background,
@@ -180,35 +132,55 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
-  statementHeader: {
-    marginBottom: 16,
-  },
-  bankRow: {
+  infoBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginBottom: 8,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
   },
-  diamond: {
-    width: 24,
-    height: 24,
-    backgroundColor: '#FFCC00',
-    transform: [{ rotate: '45deg' }],
+  infoLeft: {
+    flex: 1,
+    gap: 2,
   },
-  bankName: {
-    fontSize: 16,
+  infoLabel: {
+    fontSize: 14,
     fontWeight: '700' as const,
     color: Colors.text,
   },
-  bankSub: {
-    fontSize: 11,
+  infoSub: {
+    fontSize: 12,
     color: Colors.textMuted,
   },
-  statementTitle: {
-    fontSize: 24,
-    fontWeight: '300' as const,
-    color: '#FFCC00',
-    letterSpacing: -0.5,
+  toggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.accent + '40',
+  },
+  toggleText: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    color: Colors.accent,
+  },
+  webviewContainer: {
+    flex: 1,
+    margin: 8,
+    borderRadius: 10,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  summaryContainer: {
+    flex: 1,
+    padding: 16,
   },
   summaryCard: {
     backgroundColor: Colors.card,
@@ -216,13 +188,12 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: Colors.border,
-    marginBottom: 12,
   },
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 6,
+    paddingVertical: 8,
   },
   summaryLabel: {
     fontSize: 13,
@@ -233,90 +204,13 @@ const styles = StyleSheet.create({
     fontWeight: '600' as const,
     color: Colors.text,
   },
-  balanceText: {
-    color: Colors.textSecondary,
-  },
-  balanceAccent: {
+  accentText: {
     color: Colors.accent,
     fontWeight: '700' as const,
   },
   divider: {
     height: 1,
     backgroundColor: Colors.border,
-    marginVertical: 2,
-  },
-  txCountRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 4,
-    marginBottom: 8,
-  },
-  txCount: {
-    fontSize: 12,
-    color: Colors.textMuted,
-    fontWeight: '500' as const,
-  },
-  txPages: {
-    fontSize: 12,
-    color: Colors.textMuted,
-    fontWeight: '500' as const,
-  },
-  tableHeader: {
-    flexDirection: 'row',
-    backgroundColor: '#FFCC00',
-    borderRadius: 6,
-    paddingVertical: 6,
-    paddingHorizontal: 6,
-    marginBottom: 2,
-  },
-  thText: {
-    fontSize: 10,
-    fontWeight: '700' as const,
-    color: '#1A1A1A',
-  },
-  dateCol: {
-    width: 42,
-  },
-  descCol: {
-    flex: 1,
-    paddingHorizontal: 4,
-  },
-  numCol: {
-    width: 52,
-    textAlign: 'right' as const,
-  },
-  balCol: {
-    width: 60,
-    textAlign: 'right' as const,
-  },
-  txRow: {
-    flexDirection: 'row',
-    paddingVertical: 5,
-    paddingHorizontal: 6,
-    borderBottomWidth: 0.5,
-    borderBottomColor: Colors.border,
-  },
-  txRowAlt: {
-    backgroundColor: Colors.card + '40',
-  },
-  txCell: {
-    fontSize: 10,
-    color: Colors.textSecondary,
-  },
-  debitText: {
-    color: Colors.error,
-  },
-  creditText: {
-    color: Colors.success,
-  },
-  moreBox: {
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  moreText: {
-    fontSize: 12,
-    color: Colors.textMuted,
-    fontWeight: '500' as const,
   },
   bottomBar: {
     paddingHorizontal: 16,
@@ -336,8 +230,5 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700' as const,
     color: Colors.background,
-  },
-  bottomPad: {
-    height: 20,
   },
 });
