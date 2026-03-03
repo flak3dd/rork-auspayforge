@@ -71,7 +71,7 @@ body {margin: 0;padding: 0;font-family: Helvetica, Arial, sans-serif;color: #1A1
 .yellow-divider {border-top: 1.8pt solid #FFC523;margin: 12px 0;}
 .transaction-table {width: 100%;border-collapse: collapse;font-size: 9pt;margin-top: 20px;}
 .transaction-table thead tr {background-color: #FFC523;}
-.transaction-table th {padding: 6px 8px;text-align: left;font-weight: bold;}
+.transaction-table th {padding: 6px 8px;text-align: left;font-weight: bold;font-size: 11pt;}
 .transaction-table td {padding: 4px 8px;border-bottom: 1.5pt solid #FFC523;vertical-align: top;line-height:1.28;}
 .transaction-table td:first-child {width: auto;padding-left: 2px;padding-right: 4px;border-bottom: none;text-align: right;white-space: nowrap;}
 .transaction-table th:first-child {width: auto;padding-left: 2px;padding-right: 4px;text-align: left;}
