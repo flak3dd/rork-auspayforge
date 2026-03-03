@@ -1,4 +1,6 @@
-const { getDefaultConfig } = require('expo/metro-config');
+const { getDefaultConfig } = require("expo/metro-config");
+const { withRorkMetro } = require("@rork-ai/toolkit-sdk/metro");
+
 const config = getDefaultConfig(__dirname);
-config.resolver.alias = { '@': __dirname + '/src' };
-module.exports = config;
+
+module.exports = withRorkMetro(config);
