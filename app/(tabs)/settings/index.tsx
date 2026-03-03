@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-  Linking,
+  Animated,
 } from 'react-native';
 import {
   Info,
@@ -15,7 +15,8 @@ import {
   DollarSign,
   HelpCircle,
   Trash2,
-  ExternalLink,
+  ChevronRight,
+  Zap,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
@@ -34,22 +35,48 @@ function SettingRow({
   onPress?: () => void;
   destructive?: boolean;
 }) {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = useCallback(() => {
+    if (!onPress) return;
+    Animated.spring(scaleAnim, {
+      toValue: 0.97,
+      useNativeDriver: true,
+      speed: 50,
+      bounciness: 4,
+    }).start();
+  }, [scaleAnim, onPress]);
+
+  const handlePressOut = useCallback(() => {
+    if (!onPress) return;
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 50,
+      bounciness: 4,
+    }).start();
+  }, [scaleAnim, onPress]);
+
   return (
-    <TouchableOpacity
-      style={styles.row}
-      onPress={onPress}
-      activeOpacity={onPress ? 0.7 : 1}
-      disabled={!onPress}
-    >
-      <View style={[styles.rowIcon, destructive && styles.rowIconDestructive]}>
-        {icon}
-      </View>
-      <View style={styles.rowBody}>
-        <Text style={[styles.rowLabel, destructive && styles.rowLabelDestructive]}>{label}</Text>
-        {value ? <Text style={styles.rowValue}>{value}</Text> : null}
-      </View>
-      {onPress ? <ExternalLink size={14} color={Colors.textMuted} /> : null}
-    </TouchableOpacity>
+    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+      <TouchableOpacity
+        style={styles.row}
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        activeOpacity={onPress ? 0.85 : 1}
+        disabled={!onPress}
+      >
+        <View style={[styles.rowIcon, destructive && styles.rowIconDestructive]}>
+          {icon}
+        </View>
+        <View style={styles.rowBody}>
+          <Text style={[styles.rowLabel, destructive && styles.rowLabelDestructive]}>{label}</Text>
+          {value ? <Text style={styles.rowValue}>{value}</Text> : null}
+        </View>
+        {onPress ? <ChevronRight size={16} color={Colors.textMuted} /> : null}
+      </TouchableOpacity>
+    </Animated.View>
   );
 }
 
@@ -74,11 +101,11 @@ export default function SettingsScreen() {
     Alert.alert(
       'ATO Reference Info',
       '2025-26 Tax Brackets:\n' +
-      '• $0–$18,200: Nil\n' +
-      '• $18,201–$45,000: 16c per $1 over $18,200\n' +
-      '• $45,001–$135,000: $4,288 + 30c per $1 over $45,000\n' +
-      '• $135,001–$190,000: $31,288 + 37c per $1 over $135,000\n' +
-      '• $190,001+: $51,638 + 45c per $1 over $190,000\n\n' +
+      '\u2022 $0\u2013$18,200: Nil\n' +
+      '\u2022 $18,201\u2013$45,000: 16c per $1 over $18,200\n' +
+      '\u2022 $45,001\u2013$135,000: $4,288 + 30c per $1 over $45,000\n' +
+      '\u2022 $135,001\u2013$190,000: $31,288 + 37c per $1 over $135,000\n' +
+      '\u2022 $190,001+: $51,638 + 45c per $1 over $190,000\n\n' +
       'Medicare Levy: 2%\n' +
       'SG Rate: 12% of OTE\n' +
       'Annual Leave: 152 hrs/yr\n' +
@@ -94,7 +121,10 @@ export default function SettingsScreen() {
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>TAX YEAR</Text>
+        <View style={styles.sectionTitleRow}>
+          <View style={[styles.sectionAccent, { backgroundColor: Colors.accent }]} />
+          <Text style={styles.sectionTitle}>TAX YEAR</Text>
+        </View>
         <SettingRow
           icon={<Calendar size={18} color={Colors.accent} />}
           label="Financial Year"
@@ -108,7 +138,10 @@ export default function SettingsScreen() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>INFORMATION</Text>
+        <View style={styles.sectionTitleRow}>
+          <View style={[styles.sectionAccent, { backgroundColor: Colors.blue }]} />
+          <Text style={styles.sectionTitle}>INFORMATION</Text>
+        </View>
         <SettingRow
           icon={<HelpCircle size={18} color={Colors.blue} />}
           label="ATO Tax Brackets & Rates"
@@ -127,7 +160,10 @@ export default function SettingsScreen() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>DANGER ZONE</Text>
+        <View style={styles.sectionTitleRow}>
+          <View style={[styles.sectionAccent, { backgroundColor: Colors.error }]} />
+          <Text style={[styles.sectionTitle, { color: Colors.error }]}>DANGER ZONE</Text>
+        </View>
         <SettingRow
           icon={<Trash2 size={18} color={Colors.error} />}
           label="Reset All Configuration"
@@ -137,6 +173,9 @@ export default function SettingsScreen() {
       </View>
 
       <View style={styles.footer}>
+        <View style={styles.footerLogoWrap}>
+          <Zap size={20} color={Colors.accent} />
+        </View>
         <Text style={styles.footerText}>AusPayForge</Text>
         <Text style={styles.footerSub}>Simulation tool for Australian payroll documents</Text>
         <Text style={styles.footerSub}>No real financial data is produced</Text>
@@ -153,23 +192,34 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 16,
     paddingTop: 12,
+    paddingBottom: 90,
   },
   section: {
     marginBottom: 24,
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 10,
+    paddingHorizontal: 4,
+  },
+  sectionAccent: {
+    width: 3,
+    height: 14,
+    borderRadius: 1.5,
   },
   sectionTitle: {
     fontSize: 12,
     fontWeight: '700' as const,
     color: Colors.accent,
     letterSpacing: 1.2,
-    marginBottom: 10,
-    paddingHorizontal: 4,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.card,
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 14,
     marginBottom: 8,
     borderWidth: 1,
@@ -179,13 +229,13 @@ const styles = StyleSheet.create({
   rowIcon: {
     width: 36,
     height: 36,
-    borderRadius: 10,
+    borderRadius: 11,
     backgroundColor: Colors.cardElevated,
     alignItems: 'center',
     justifyContent: 'center',
   },
   rowIconDestructive: {
-    backgroundColor: Colors.error + '15',
+    backgroundColor: 'rgba(244, 63, 94, 0.12)',
   },
   rowBody: {
     flex: 1,
@@ -207,6 +257,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 30,
     gap: 4,
+  },
+  footerLogoWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: Colors.accentDim,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
   },
   footerText: {
     fontSize: 16,

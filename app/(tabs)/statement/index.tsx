@@ -9,6 +9,7 @@ import {
   TextInput,
   Platform,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
   Landmark,
   FileText,
@@ -135,6 +136,7 @@ export default function StatementScreen() {
 
   const totalCredits = statement?.transactions.reduce((sum, tx) => sum + tx.credit, 0) ?? 0;
   const totalDebits = statement?.transactions.reduce((sum, tx) => sum + tx.debit, 0) ?? 0;
+  const maxStat = Math.max(totalCredits, totalDebits, 1);
 
   if (!statement || !statementHTML) {
     return (
@@ -165,13 +167,13 @@ export default function StatementScreen() {
         <HTMLRenderer html={statementHTML} style={styles.webviewContainer} />
         <View style={styles.docBottomBar}>
           <TouchableOpacity
-            style={styles.exportBtn}
+            style={styles.exportBtnFilled}
             onPress={handleExport}
             activeOpacity={0.8}
             disabled={isExporting}
           >
             <Download size={18} color="#fff" />
-            <Text style={styles.exportBtnText}>{isExporting ? 'Exporting...' : 'Export PDF'}</Text>
+            <Text style={styles.exportBtnFilledText}>{isExporting ? 'Exporting...' : 'Export PDF'}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -185,31 +187,39 @@ export default function StatementScreen() {
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.accountCard}>
-        <View style={styles.accountCardHeader}>
-          <View style={styles.bankBadge}>
-            <Landmark size={18} color="#FFCC00" />
+        <LinearGradient
+          colors={['#1A2744', '#141A2E']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.accountGradientStripe}
+        />
+        <View style={styles.accountCardBody}>
+          <View style={styles.accountCardHeader}>
+            <View style={styles.bankBadge}>
+              <Landmark size={18} color={Colors.gold} />
+            </View>
+            <View style={styles.accountInfo}>
+              <Text style={styles.accountName}>{statement.accountHolder}</Text>
+              <Text style={styles.accountNumber}>{statement.bsb} {statement.accountNumber}</Text>
+            </View>
           </View>
-          <View style={styles.accountInfo}>
-            <Text style={styles.accountName}>{statement.accountHolder}</Text>
-            <Text style={styles.accountNumber}>{statement.bsb} {statement.accountNumber}</Text>
+          <View style={styles.balanceRow}>
+            <View style={styles.balanceItem}>
+              <Text style={styles.balanceLabel}>Opening</Text>
+              <Text style={styles.balanceValue}>${fmt(statement.openingBalance)}</Text>
+            </View>
+            <View style={styles.balanceArrow}>
+              <ArrowRight size={16} color={Colors.textMuted} />
+            </View>
+            <View style={[styles.balanceItem, styles.balanceItemEnd]}>
+              <Text style={styles.balanceLabel}>Closing</Text>
+              <Text style={[styles.balanceValue, styles.closingValue]}>${fmt(statement.closingBalance)}</Text>
+            </View>
           </View>
-        </View>
-        <View style={styles.balanceRow}>
-          <View style={styles.balanceItem}>
-            <Text style={styles.balanceLabel}>Opening</Text>
-            <Text style={styles.balanceValue}>${fmt(statement.openingBalance)}</Text>
+          <View style={styles.periodBar}>
+            <CalendarRange size={14} color={Colors.textSecondary} />
+            <Text style={styles.periodText}>{statement.statementPeriod}</Text>
           </View>
-          <View style={styles.balanceArrow}>
-            <ArrowRight size={16} color={Colors.textMuted} />
-          </View>
-          <View style={[styles.balanceItem, styles.balanceItemEnd]}>
-            <Text style={styles.balanceLabel}>Closing</Text>
-            <Text style={[styles.balanceValue, styles.closingValue]}>${fmt(statement.closingBalance)}</Text>
-          </View>
-        </View>
-        <View style={styles.periodBar}>
-          <CalendarRange size={14} color={Colors.textSecondary} />
-          <Text style={styles.periodText}>{statement.statementPeriod}</Text>
         </View>
       </View>
 
@@ -311,24 +321,33 @@ export default function StatementScreen() {
 
       <View style={styles.statsGrid}>
         <View style={styles.statItem}>
-          <View style={[styles.statIcon, { backgroundColor: '#34C75920' }]}>
+          <View style={[styles.statIcon, { backgroundColor: 'rgba(52, 211, 153, 0.12)' }]}>
             <TrendingUp size={16} color={Colors.success} />
           </View>
           <Text style={styles.statAmount}>${fmt(totalCredits)}</Text>
+          <View style={styles.statBarTrack}>
+            <View style={[styles.statBarFill, { width: `${(totalCredits / maxStat) * 100}%`, backgroundColor: Colors.success }]} />
+          </View>
           <Text style={styles.statLabel}>Total In</Text>
         </View>
         <View style={styles.statItem}>
-          <View style={[styles.statIcon, { backgroundColor: '#FF3B3020' }]}>
+          <View style={[styles.statIcon, { backgroundColor: 'rgba(244, 63, 94, 0.12)' }]}>
             <TrendingDown size={16} color={Colors.error} />
           </View>
           <Text style={styles.statAmount}>${fmt(totalDebits)}</Text>
+          <View style={styles.statBarTrack}>
+            <View style={[styles.statBarFill, { width: `${(totalDebits / maxStat) * 100}%`, backgroundColor: Colors.error }]} />
+          </View>
           <Text style={styles.statLabel}>Total Out</Text>
         </View>
         <View style={styles.statItem}>
-          <View style={[styles.statIcon, { backgroundColor: Colors.accent + '20' }]}>
+          <View style={[styles.statIcon, { backgroundColor: Colors.accentDim }]}>
             <CreditCard size={16} color={Colors.accent} />
           </View>
           <Text style={styles.statAmount}>{statement.transactions.length}</Text>
+          <View style={styles.statBarTrack}>
+            <View style={[styles.statBarFill, { width: '60%', backgroundColor: Colors.accent }]} />
+          </View>
           <Text style={styles.statLabel}>Transactions</Text>
         </View>
       </View>
@@ -344,7 +363,7 @@ export default function StatementScreen() {
             activeOpacity={0.7}
           >
             <View style={styles.payDatesHeaderLeft}>
-              <DollarSign size={16} color={Colors.accent} />
+              <DollarSign size={16} color={Colors.gold} />
               <Text style={styles.payDatesSectionTitle}>Payslip Deposits</Text>
             </View>
             {showPayDates ? (
@@ -357,18 +376,21 @@ export default function StatementScreen() {
             <View style={styles.payDatesList}>
               {payslips.map((ps, i) => (
                 <View key={i} style={styles.payDateRow}>
-                  <View style={styles.payDateLeft}>
-                    <View style={styles.payDateDot} />
-                    <View>
+                  <View style={styles.timelineCol}>
+                    <View style={styles.timelineDot} />
+                    {i < payslips.length - 1 && <View style={styles.timelineLine} />}
+                  </View>
+                  <View style={styles.payDateContent}>
+                    <View style={styles.payDateLeft}>
                       <Text style={styles.payDateLabel}>Period {i + 1}</Text>
                       <Text style={styles.payDateRange}>
                         {fmtDate(ps.period.startDate)} – {fmtDate(ps.period.endDate)}
                       </Text>
                     </View>
-                  </View>
-                  <View style={styles.payDateRight}>
-                    <Text style={styles.payDateAmount}>${fmt(ps.netPay)}</Text>
-                    <Text style={styles.payDatePaidOn}>Paid {fmtDate(ps.period.paymentDate)}</Text>
+                    <View style={styles.payDateRight}>
+                      <Text style={styles.payDateAmount}>${fmt(ps.netPay)}</Text>
+                      <Text style={styles.payDatePaidOn}>Paid {fmtDate(ps.period.paymentDate)}</Text>
+                    </View>
                   </View>
                 </View>
               ))}
@@ -390,20 +412,20 @@ export default function StatementScreen() {
         >
           <FileText size={18} color={Colors.accent} />
           <Text style={styles.viewDocText}>View Full Document</Text>
-          <Text style={styles.viewDocPages}>{statement.pages.length} pages</Text>
+          <View style={styles.viewDocPagesBadge}>
+            <Text style={styles.viewDocPages}>{statement.pages.length} pages</Text>
+          </View>
         </TouchableOpacity>
 
-        <View style={styles.exportRow}>
-          <TouchableOpacity
-            style={styles.exportSmallBtn}
-            onPress={handleExport}
-            activeOpacity={0.7}
-            disabled={isExporting}
-          >
-            <Download size={16} color="#fff" />
-            <Text style={styles.exportSmallText}>{isExporting ? 'Exporting...' : 'Export PDF'}</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          style={styles.exportBtnFilled}
+          onPress={handleExport}
+          activeOpacity={0.7}
+          disabled={isExporting}
+        >
+          <Download size={16} color="#fff" />
+          <Text style={styles.exportBtnFilledText}>{isExporting ? 'Exporting...' : 'Export PDF'}</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.bottomPad} />
@@ -455,11 +477,17 @@ const styles = StyleSheet.create({
   },
   accountCard: {
     backgroundColor: Colors.card,
-    borderRadius: 16,
-    padding: 18,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: Colors.border,
     marginBottom: 14,
+    overflow: 'hidden',
+  },
+  accountGradientStripe: {
+    height: 6,
+  },
+  accountCardBody: {
+    padding: 18,
   },
   accountCardHeader: {
     flexDirection: 'row',
@@ -470,8 +498,8 @@ const styles = StyleSheet.create({
   bankBadge: {
     width: 44,
     height: 44,
-    borderRadius: 12,
-    backgroundColor: '#FFCC0018',
+    borderRadius: 13,
+    backgroundColor: Colors.goldDim,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -547,7 +575,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: Colors.border,
-    gap: 6,
+    gap: 5,
   },
   statIcon: {
     width: 34,
@@ -557,19 +585,31 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   statAmount: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '800' as const,
     color: Colors.text,
     fontVariant: ['tabular-nums'] as const,
   },
+  statBarTrack: {
+    width: '100%',
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: Colors.border,
+    overflow: 'hidden',
+  },
+  statBarFill: {
+    height: 3,
+    borderRadius: 1.5,
+  },
   statLabel: {
-    fontSize: 11,
+    fontSize: 10,
     color: Colors.textMuted,
-    fontWeight: '500' as const,
+    fontWeight: '600' as const,
+    textTransform: 'uppercase' as const,
   },
   payDatesSection: {
     backgroundColor: Colors.card,
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: Colors.border,
     marginBottom: 14,
@@ -597,23 +637,37 @@ const styles = StyleSheet.create({
   },
   payDateRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
+    minHeight: 60,
   },
-  payDateLeft: {
+  timelineCol: {
+    width: 24,
+    alignItems: 'center',
+  },
+  timelineDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: Colors.gold,
+    marginTop: 4,
+  },
+  timelineLine: {
+    width: 2,
+    flex: 1,
+    backgroundColor: Colors.gold + '40',
+    marginTop: 4,
+  },
+  payDateContent: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    flex: 1,
+    justifyContent: 'space-between',
+    paddingBottom: 14,
+    paddingLeft: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
   },
-  payDateDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.accent,
+  payDateLeft: {
+    flex: 1,
   },
   payDateLabel: {
     fontSize: 14,
@@ -631,7 +685,7 @@ const styles = StyleSheet.create({
   payDateAmount: {
     fontSize: 16,
     fontWeight: '800' as const,
-    color: Colors.success,
+    color: Colors.gold,
     fontVariant: ['tabular-nums'] as const,
   },
   payDatePaidOn: {
@@ -671,46 +725,33 @@ const styles = StyleSheet.create({
     color: Colors.accent,
     flex: 1,
   },
-  viewDocPages: {
-    fontSize: 12,
-    fontWeight: '600' as const,
-    color: Colors.textMuted,
+  viewDocPagesBadge: {
     backgroundColor: Colors.cardElevated,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
-    overflow: 'hidden',
   },
-  exportRow: {
-    flexDirection: 'row',
-    gap: 10,
+  viewDocPages: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    color: Colors.textMuted,
   },
-  exportSmallBtn: {
+  exportBtnFilled: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
     paddingVertical: 14,
-    borderRadius: 14,
+    borderRadius: 26,
     backgroundColor: Colors.accent,
+    shadowColor: Colors.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 4,
   },
-  exportSmallText: {
-    fontSize: 15,
-    fontWeight: '700' as const,
-    color: '#fff',
-  },
-  exportBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: 14,
-    backgroundColor: Colors.accent,
-  },
-  exportBtnText: {
+  exportBtnFilledText: {
     fontSize: 15,
     fontWeight: '700' as const,
     color: '#fff',
@@ -760,11 +801,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   bottomPad: {
-    height: 30,
+    height: 90,
   },
   settingsCard: {
     backgroundColor: Colors.card,
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: Colors.border,
     marginBottom: 14,
@@ -785,7 +826,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 9,
-    backgroundColor: Colors.accent + '18',
+    backgroundColor: Colors.accentDim,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -845,7 +886,7 @@ const styles = StyleSheet.create({
   },
   lengthOptionActive: {
     borderColor: Colors.accent,
-    backgroundColor: Colors.accent + '15',
+    backgroundColor: Colors.accentDim,
   },
   lengthOptionText: {
     fontSize: 14,
@@ -861,7 +902,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     paddingVertical: 13,
-    borderRadius: 12,
+    borderRadius: 22,
     backgroundColor: Colors.accent,
   },
   regenerateBtnDisabled: {

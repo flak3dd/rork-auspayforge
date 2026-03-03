@@ -77,24 +77,27 @@ function TemplateCardInner({ template, onSelect }: TemplateCardProps) {
         onPressOut={handlePressOut}
         testID={`template-${template.id}`}
       >
-        <View style={styles.topRow}>
-          <View style={[styles.iconCircle, { backgroundColor: template.accent + '1A' }]}>
-            <IconComponent size={20} color={template.accent} />
-          </View>
-          <View style={styles.badges}>
-            <View style={[styles.badge, { backgroundColor: template.accent + '1A' }]}>
-              <Text style={[styles.badgeText, { color: template.accent }]}>{basisLabel}</Text>
+        <View style={[styles.cardEdge, { backgroundColor: template.accent }]} />
+        <View style={styles.cardContent}>
+          <View style={styles.topRow}>
+            <View style={[styles.iconCircle, { backgroundColor: template.accent + '18' }]}>
+              <IconComponent size={20} color={template.accent} />
             </View>
-            <View style={styles.badge}>
-              <Text style={styles.badgeTextMuted}>{freqLabel}</Text>
+            <View style={styles.badges}>
+              <View style={[styles.badge, { backgroundColor: template.accent + '18' }]}>
+                <Text style={[styles.badgeText, { color: template.accent }]}>{basisLabel}</Text>
+              </View>
+              <View style={styles.badgeMuted}>
+                <Text style={styles.badgeTextMuted}>{freqLabel}</Text>
+              </View>
             </View>
           </View>
-        </View>
-        <Text style={styles.name}>{template.name}</Text>
-        <Text style={styles.description} numberOfLines={2}>{template.description}</Text>
-        <View style={styles.footer}>
-          <Text style={styles.footerDetail}>{template.config.employer.name}</Text>
-          <ChevronRight size={14} color={Colors.textMuted} />
+          <Text style={styles.name}>{template.name}</Text>
+          <Text style={styles.description} numberOfLines={2}>{template.description}</Text>
+          <View style={styles.footer}>
+            <Text style={styles.footerDetail}>{template.config.employer.name}</Text>
+            <ChevronRight size={14} color={Colors.textMuted} />
+          </View>
         </View>
       </TouchableOpacity>
     </Animated.View>
@@ -109,10 +112,18 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: Colors.card,
-    borderRadius: 14,
-    padding: 16,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: Colors.border,
+    flexDirection: 'row',
+    overflow: 'hidden',
+  },
+  cardEdge: {
+    width: 4,
+  },
+  cardContent: {
+    flex: 1,
+    padding: 16,
   },
   topRow: {
     flexDirection: 'row',
@@ -132,10 +143,15 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   badge: {
-    backgroundColor: Colors.cardElevated,
-    borderRadius: 6,
+    borderRadius: 8,
     paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingVertical: 4,
+  },
+  badgeMuted: {
+    backgroundColor: Colors.cardElevated,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   badgeText: {
     fontSize: 11,

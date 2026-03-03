@@ -117,6 +117,7 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 16,
     paddingTop: 12,
+    paddingBottom: 90,
   },
   emptyContainer: {
     flex: 1,
@@ -166,7 +167,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 8,
-    backgroundColor: Colors.error + '15',
+    backgroundColor: 'rgba(244, 63, 94, 0.12)',
   },
   clearText: {
     fontSize: 13,
@@ -175,7 +176,7 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: Colors.card,
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 14,
     flexDirection: 'row',
     alignItems: 'center',
@@ -187,8 +188,8 @@ const styles = StyleSheet.create({
   cardIcon: {
     width: 42,
     height: 42,
-    borderRadius: 12,
-    backgroundColor: Colors.accent + '1A',
+    borderRadius: 13,
+    backgroundColor: Colors.accentDim,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -214,7 +215,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 10,
-    backgroundColor: Colors.error + '15',
+    backgroundColor: 'rgba(244, 63, 94, 0.12)',
     alignItems: 'center',
     justifyContent: 'center',
   },

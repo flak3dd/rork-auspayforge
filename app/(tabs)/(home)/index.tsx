@@ -12,6 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
   Zap,
   ChevronRight,
@@ -56,26 +57,8 @@ export default function HomeScreen() {
   } = usePayroll();
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [showStatementConfig, setShowStatementConfig] = useState<boolean>(false);
-  const pulsePayslip = useRef(new Animated.Value(1)).current;
-  const pulseStatement = useRef(new Animated.Value(1)).current;
-
-  React.useEffect(() => {
-    const loop1 = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulsePayslip, { toValue: 1.03, duration: 1400, useNativeDriver: true }),
-        Animated.timing(pulsePayslip, { toValue: 1, duration: 1400, useNativeDriver: true }),
-      ])
-    );
-    const loop2 = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseStatement, { toValue: 1.03, duration: 1600, useNativeDriver: true }),
-        Animated.timing(pulseStatement, { toValue: 1, duration: 1600, useNativeDriver: true }),
-      ])
-    );
-    loop1.start();
-    loop2.start();
-    return () => { loop1.stop(); loop2.stop(); };
-  }, [pulsePayslip, pulseStatement]);
+  const scalePayslip = useRef(new Animated.Value(1)).current;
+  const scaleStatement = useRef(new Animated.Value(1)).current;
 
   const handleTemplateSelect = useCallback((template: PayrollTemplate) => {
     console.log('[Home] Template selected:', template.id);
@@ -88,6 +71,14 @@ export default function HomeScreen() {
     router.push('/configure');
   }, [router]);
 
+  const animatePress = useCallback((anim: Animated.Value, cb: () => void) => {
+    Animated.sequence([
+      Animated.timing(anim, { toValue: 0.95, duration: 80, useNativeDriver: true }),
+      Animated.timing(anim, { toValue: 1, duration: 120, useNativeDriver: true }),
+    ]).start();
+    cb();
+  }, []);
+
   const handleForgePayslips = useCallback(() => {
     if (!selectedTemplate) {
       Alert.alert('Select a Template', 'Choose a payroll template first, then tap Forge.');
@@ -95,29 +86,33 @@ export default function HomeScreen() {
     }
     console.log('[Home] Forge payslips triggered');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    try {
-      generatePayslipsOnly();
-      router.push('/payslips' as never);
-    } catch (e) {
-      console.error('[Home] Payslip generation error:', e);
-      Alert.alert('Error', 'Failed to generate payslips. Please check your config.');
-    }
-  }, [selectedTemplate, generatePayslipsOnly, router]);
+    animatePress(scalePayslip, () => {
+      try {
+        generatePayslipsOnly();
+        router.push('/payslips' as never);
+      } catch (e) {
+        console.error('[Home] Payslip generation error:', e);
+        Alert.alert('Error', 'Failed to generate payslips. Please check your config.');
+      }
+    });
+  }, [selectedTemplate, generatePayslipsOnly, router, animatePress, scalePayslip]);
 
   const handleForgeStatement = useCallback(() => {
     console.log('[Home] Forge statement triggered');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    try {
-      if (!output?.payslips || output.payslips.length === 0) {
-        generatePayslipsOnly();
+    animatePress(scaleStatement, () => {
+      try {
+        if (!output?.payslips || output.payslips.length === 0) {
+          generatePayslipsOnly();
+        }
+        generateStatementOnly();
+        router.push('/statement' as never);
+      } catch (e) {
+        console.error('[Home] Statement generation error:', e);
+        Alert.alert('Error', 'Failed to generate statement. Please check your config.');
       }
-      generateStatementOnly();
-      router.push('/statement' as never);
-    } catch (e) {
-      console.error('[Home] Statement generation error:', e);
-      Alert.alert('Error', 'Failed to generate statement. Please check your config.');
-    }
-  }, [output, generatePayslipsOnly, generateStatementOnly, router]);
+    });
+  }, [output, generatePayslipsOnly, generateStatementOnly, router, animatePress, scaleStatement]);
 
   const hasPayslips = output !== null && output.payslips.length > 0;
   const hasStatement = output !== null && output.bankStatement.transactions.length > 0;
@@ -128,33 +123,47 @@ export default function HomeScreen() {
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
-      <View style={styles.hero}>
-        <View style={styles.heroIconWrap}>
-          <View style={styles.heroIconInner}>
-            <Zap size={28} color={Colors.accent} />
+      <LinearGradient
+        colors={['#0D1525', '#0F1B30', '#0A0E1A']}
+        style={styles.heroBg}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <View style={styles.hero}>
+          <View style={styles.heroIconWrap}>
+            <Zap size={26} color={Colors.accent} />
           </View>
+          <Text style={styles.heroTitle}>AusPayForge</Text>
+          <Text style={styles.heroSubtitle}>
+            Generate realistic Australian payslips and bank statements
+          </Text>
         </View>
-        <Text style={styles.heroTitle}>AusPayForge</Text>
-        <Text style={styles.heroSubtitle}>
-          Generate realistic Australian payslips and bank statements
-        </Text>
-      </View>
+      </LinearGradient>
 
       <View style={styles.statsRow}>
         <View style={styles.statCard}>
-          <Sparkles size={16} color={Colors.accent} />
-          <Text style={styles.statValue}>{TEMPLATES.length}</Text>
-          <Text style={styles.statLabel}>Templates</Text>
+          <View style={[styles.statAccent, { backgroundColor: Colors.accent }]} />
+          <View style={styles.statContent}>
+            <Sparkles size={15} color={Colors.accent} />
+            <Text style={styles.statValue}>{TEMPLATES.length}</Text>
+            <Text style={styles.statLabel}>Templates</Text>
+          </View>
         </View>
         <View style={styles.statCard}>
-          <Shield size={16} color={Colors.success} />
-          <Text style={styles.statValue}>100%</Text>
-          <Text style={styles.statLabel}>Offline</Text>
+          <View style={[styles.statAccent, { backgroundColor: Colors.success }]} />
+          <View style={styles.statContent}>
+            <Shield size={15} color={Colors.success} />
+            <Text style={styles.statValue}>100%</Text>
+            <Text style={styles.statLabel}>Offline</Text>
+          </View>
         </View>
         <View style={styles.statCard}>
-          <Zap size={16} color={Colors.warning} />
-          <Text style={styles.statValue}>4</Text>
-          <Text style={styles.statLabel}>Pay Periods</Text>
+          <View style={[styles.statAccent, { backgroundColor: Colors.gold }]} />
+          <View style={styles.statContent}>
+            <Zap size={15} color={Colors.gold} />
+            <Text style={styles.statValue}>4</Text>
+            <Text style={styles.statLabel}>Periods</Text>
+          </View>
         </View>
       </View>
 
@@ -190,218 +199,224 @@ export default function HomeScreen() {
           <View style={styles.forgeDivider} />
 
           <View style={styles.forgeCard}>
-            <View style={styles.forgeCardHeader}>
-              <View style={styles.forgeCardIconWrap}>
-                <FileText size={20} color={Colors.accent} />
+            <View style={[styles.forgeCardEdge, { backgroundColor: Colors.accent }]} />
+            <View style={styles.forgeCardInner}>
+              <View style={styles.forgeCardHeader}>
+                <View style={[styles.forgeCardIconWrap, { backgroundColor: Colors.accentDim }]}>
+                  <FileText size={20} color={Colors.accent} />
+                </View>
+                <View style={styles.forgeCardHeaderText}>
+                  <Text style={styles.forgeCardTitle}>Payslips</Text>
+                  <Text style={styles.forgeCardDesc}>Generate 4 consecutive pay period slips</Text>
+                </View>
               </View>
-              <View style={styles.forgeCardHeaderText}>
-                <Text style={styles.forgeCardTitle}>Payslips</Text>
-                <Text style={styles.forgeCardDesc}>Generate 4 consecutive pay period slips</Text>
-              </View>
-            </View>
 
-            {hasPayslips && (
+              {hasPayslips && (
+                <TouchableOpacity
+                  style={styles.viewExistingRow}
+                  onPress={() => router.push('/payslips' as never)}
+                  activeOpacity={0.7}
+                >
+                  <FileText size={14} color={Colors.accent} />
+                  <Text style={styles.viewExistingText}>{output.payslips.length} payslips generated</Text>
+                  <ChevronRight size={14} color={Colors.textMuted} />
+                </TouchableOpacity>
+              )}
+
               <TouchableOpacity
-                style={styles.viewExistingRow}
-                onPress={() => router.push('/payslips' as never)}
+                style={styles.customizeRow}
+                onPress={handleCustomize}
                 activeOpacity={0.7}
               >
-                <FileText size={14} color={Colors.accent} />
-                <Text style={styles.viewExistingText}>{output.payslips.length} payslips generated</Text>
-                <ChevronRight size={14} color={Colors.textMuted} />
+                <Text style={styles.customizeText}>Customize before forging</Text>
+                <ChevronRight size={14} color={Colors.accent} />
               </TouchableOpacity>
-            )}
 
-            <TouchableOpacity
-              style={styles.customizeRow}
-              onPress={handleCustomize}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.customizeText}>Customize before forging</Text>
-              <ChevronRight size={14} color={Colors.accent} />
-            </TouchableOpacity>
-
-            <Animated.View style={{ transform: [{ scale: pulsePayslip }] }}>
-              <TouchableOpacity
-                style={styles.forgeButton}
-                onPress={handleForgePayslips}
-                activeOpacity={0.8}
-                disabled={isGenerating}
-                testID="forge-payslips-button"
-              >
-                {isGenerating ? (
-                  <ActivityIndicator color={Colors.background} size="small" />
-                ) : (
-                  <>
-                    <Zap size={18} color={Colors.background} />
-                    <Text style={styles.forgeButtonText}>Forge Payslips</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </Animated.View>
+              <Animated.View style={{ transform: [{ scale: scalePayslip }] }}>
+                <TouchableOpacity
+                  style={styles.forgeButton}
+                  onPress={handleForgePayslips}
+                  activeOpacity={0.8}
+                  disabled={isGenerating}
+                  testID="forge-payslips-button"
+                >
+                  {isGenerating ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <>
+                      <Zap size={18} color="#fff" />
+                      <Text style={styles.forgeButtonText}>Forge Payslips</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </Animated.View>
+            </View>
           </View>
 
           <View style={styles.forgeCard}>
-            <View style={styles.forgeCardHeader}>
-              <View style={[styles.forgeCardIconWrap, { backgroundColor: '#FFCC0018' }]}>
-                <Landmark size={20} color="#FFCC00" />
+            <View style={[styles.forgeCardEdge, { backgroundColor: Colors.gold }]} />
+            <View style={styles.forgeCardInner}>
+              <View style={styles.forgeCardHeader}>
+                <View style={[styles.forgeCardIconWrap, { backgroundColor: Colors.goldDim }]}>
+                  <Landmark size={20} color={Colors.gold} />
+                </View>
+                <View style={styles.forgeCardHeaderText}>
+                  <Text style={styles.forgeCardTitle}>Bank Statement</Text>
+                  <Text style={styles.forgeCardDesc}>CommBank-style statement with transactions</Text>
+                </View>
               </View>
-              <View style={styles.forgeCardHeaderText}>
-                <Text style={styles.forgeCardTitle}>Bank Statement</Text>
-                <Text style={styles.forgeCardDesc}>CommBank-style statement with transactions</Text>
-              </View>
-            </View>
 
-            {hasStatement && (
+              {hasStatement && (
+                <TouchableOpacity
+                  style={styles.viewExistingRow}
+                  onPress={() => router.push('/statement' as never)}
+                  activeOpacity={0.7}
+                >
+                  <Landmark size={14} color={Colors.gold} />
+                  <Text style={styles.viewExistingText}>{output.bankStatement.transactions.length} transactions</Text>
+                  <ChevronRight size={14} color={Colors.textMuted} />
+                </TouchableOpacity>
+              )}
+
               <TouchableOpacity
-                style={styles.viewExistingRow}
-                onPress={() => router.push('/statement' as never)}
+                style={styles.configToggle}
+                onPress={() => {
+                  setShowStatementConfig(!showStatementConfig);
+                  Haptics.selectionAsync();
+                }}
                 activeOpacity={0.7}
               >
-                <Landmark size={14} color="#FFCC00" />
-                <Text style={styles.viewExistingText}>{output.bankStatement.transactions.length} transactions</Text>
-                <ChevronRight size={14} color={Colors.textMuted} />
-              </TouchableOpacity>
-            )}
-
-            <TouchableOpacity
-              style={styles.configToggle}
-              onPress={() => {
-                setShowStatementConfig(!showStatementConfig);
-                Haptics.selectionAsync();
-              }}
-              activeOpacity={0.7}
-            >
-              <View style={styles.configToggleLeft}>
-                <Calendar size={14} color={Colors.textSecondary} />
-                <Text style={styles.configToggleText}>Statement Options</Text>
-              </View>
-              {showStatementConfig ? (
-                <ChevronUp size={16} color={Colors.textMuted} />
-              ) : (
-                <ChevronDown size={16} color={Colors.textMuted} />
-              )}
-            </TouchableOpacity>
-
-            {showStatementConfig && (
-              <View style={styles.configBody}>
-                <View style={styles.configField}>
-                  <View style={styles.configFieldLabelRow}>
-                    <Calendar size={12} color={Colors.textSecondary} />
-                    <Text style={styles.configFieldLabel}>Start Date</Text>
-                  </View>
-                  <TextInput
-                    style={styles.configInput}
-                    value={config.bankConfig.statementStartDate}
-                    onChangeText={(t) => updateBankConfig('statementStartDate', t)}
-                    placeholder="YYYY-MM-DD"
-                    placeholderTextColor={Colors.textMuted}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
+                <View style={styles.configToggleLeft}>
+                  <Calendar size={14} color={Colors.textSecondary} />
+                  <Text style={styles.configToggleText}>Statement Options</Text>
                 </View>
-
-                <View style={styles.configField}>
-                  <View style={styles.configFieldLabelRow}>
-                    <CalendarRange size={12} color={Colors.textSecondary} />
-                    <Text style={styles.configFieldLabel}>Statement Length</Text>
-                  </View>
-                  <View style={styles.lengthPicker}>
-                    {LENGTH_OPTIONS.map(opt => (
-                      <TouchableOpacity
-                        key={opt.value}
-                        style={[
-                          styles.lengthOption,
-                          config.bankConfig.statementLength === opt.value && styles.lengthOptionActive,
-                        ]}
-                        onPress={() => {
-                          updateBankConfig('statementLength', opt.value);
-                          Haptics.selectionAsync();
-                        }}
-                        activeOpacity={0.7}
-                      >
-                        <Text
-                          style={[
-                            styles.lengthOptionText,
-                            config.bankConfig.statementLength === opt.value && styles.lengthOptionTextActive,
-                          ]}
-                        >
-                          {opt.label}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-
-                <View style={styles.configFieldRow}>
-                  <View style={[styles.configField, { flex: 1 }]}>
-                    <View style={styles.configFieldLabelRow}>
-                      <Wallet size={12} color={Colors.textSecondary} />
-                      <Text style={styles.configFieldLabel}>Opening Balance</Text>
-                    </View>
-                    <TextInput
-                      style={styles.configInput}
-                      value={config.bankConfig.openingBalance > 0 ? String(config.bankConfig.openingBalance) : ''}
-                      onChangeText={(t) => updateBankConfig('openingBalance', parseFloat(t) || 0)}
-                      placeholder="200.00"
-                      placeholderTextColor={Colors.textMuted}
-                      keyboardType="decimal-pad"
-                    />
-                  </View>
-                  <View style={[styles.configField, { flex: 1 }]}>
-                    <View style={styles.configFieldLabelRow}>
-                      <DollarSign size={12} color={Colors.textSecondary} />
-                      <Text style={styles.configFieldLabel}>Closing Balance</Text>
-                    </View>
-                    <TextInput
-                      style={styles.configInput}
-                      value={config.bankConfig.closingBalance > 0 ? String(config.bankConfig.closingBalance) : ''}
-                      onChangeText={(t) => updateBankConfig('closingBalance', parseFloat(t) || 0)}
-                      placeholder="1000.00"
-                      placeholderTextColor={Colors.textMuted}
-                      keyboardType="decimal-pad"
-                    />
-                  </View>
-                </View>
-
-                <View style={styles.configField}>
-                  <View style={styles.configFieldLabelRow}>
-                    <TrendingDown size={12} color={Colors.textSecondary} />
-                    <Text style={styles.configFieldLabel}>Monthly Spend Target</Text>
-                  </View>
-                  <TextInput
-                    style={styles.configInput}
-                    value={config.bankConfig.monthlySpendTarget > 0 ? String(config.bankConfig.monthlySpendTarget) : ''}
-                    onChangeText={(t) => updateBankConfig('monthlySpendTarget', parseFloat(t) || 0)}
-                    placeholder="2500.00"
-                    placeholderTextColor={Colors.textMuted}
-                    keyboardType="decimal-pad"
-                  />
-                  <Text style={styles.configFieldHint}>
-                    Rough monthly expenditure for generating realistic debits
-                  </Text>
-                </View>
-              </View>
-            )}
-
-            <Animated.View style={{ transform: [{ scale: pulseStatement }] }}>
-              <TouchableOpacity
-                style={[styles.forgeButton, styles.forgeButtonStatement]}
-                onPress={handleForgeStatement}
-                activeOpacity={0.8}
-                disabled={isGeneratingStatement}
-                testID="forge-statement-button"
-              >
-                {isGeneratingStatement ? (
-                  <ActivityIndicator color={Colors.background} size="small" />
+                {showStatementConfig ? (
+                  <ChevronUp size={16} color={Colors.textMuted} />
                 ) : (
-                  <>
-                    <Landmark size={18} color={Colors.background} />
-                    <Text style={styles.forgeButtonText}>Forge Statement</Text>
-                  </>
+                  <ChevronDown size={16} color={Colors.textMuted} />
                 )}
               </TouchableOpacity>
-            </Animated.View>
+
+              {showStatementConfig && (
+                <View style={styles.configBody}>
+                  <View style={styles.configField}>
+                    <View style={styles.configFieldLabelRow}>
+                      <Calendar size={12} color={Colors.textSecondary} />
+                      <Text style={styles.configFieldLabel}>Start Date</Text>
+                    </View>
+                    <TextInput
+                      style={styles.configInput}
+                      value={config.bankConfig.statementStartDate}
+                      onChangeText={(t) => updateBankConfig('statementStartDate', t)}
+                      placeholder="YYYY-MM-DD"
+                      placeholderTextColor={Colors.textMuted}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                  </View>
+
+                  <View style={styles.configField}>
+                    <View style={styles.configFieldLabelRow}>
+                      <CalendarRange size={12} color={Colors.textSecondary} />
+                      <Text style={styles.configFieldLabel}>Statement Length</Text>
+                    </View>
+                    <View style={styles.lengthPicker}>
+                      {LENGTH_OPTIONS.map(opt => (
+                        <TouchableOpacity
+                          key={opt.value}
+                          style={[
+                            styles.lengthOption,
+                            config.bankConfig.statementLength === opt.value && styles.lengthOptionActive,
+                          ]}
+                          onPress={() => {
+                            updateBankConfig('statementLength', opt.value);
+                            Haptics.selectionAsync();
+                          }}
+                          activeOpacity={0.7}
+                        >
+                          <Text
+                            style={[
+                              styles.lengthOptionText,
+                              config.bankConfig.statementLength === opt.value && styles.lengthOptionTextActive,
+                            ]}
+                          >
+                            {opt.label}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+
+                  <View style={styles.configFieldRow}>
+                    <View style={[styles.configField, { flex: 1 }]}>
+                      <View style={styles.configFieldLabelRow}>
+                        <Wallet size={12} color={Colors.textSecondary} />
+                        <Text style={styles.configFieldLabel}>Opening Balance</Text>
+                      </View>
+                      <TextInput
+                        style={styles.configInput}
+                        value={config.bankConfig.openingBalance > 0 ? String(config.bankConfig.openingBalance) : ''}
+                        onChangeText={(t) => updateBankConfig('openingBalance', parseFloat(t) || 0)}
+                        placeholder="200.00"
+                        placeholderTextColor={Colors.textMuted}
+                        keyboardType="decimal-pad"
+                      />
+                    </View>
+                    <View style={[styles.configField, { flex: 1 }]}>
+                      <View style={styles.configFieldLabelRow}>
+                        <DollarSign size={12} color={Colors.textSecondary} />
+                        <Text style={styles.configFieldLabel}>Closing Balance</Text>
+                      </View>
+                      <TextInput
+                        style={styles.configInput}
+                        value={config.bankConfig.closingBalance > 0 ? String(config.bankConfig.closingBalance) : ''}
+                        onChangeText={(t) => updateBankConfig('closingBalance', parseFloat(t) || 0)}
+                        placeholder="1000.00"
+                        placeholderTextColor={Colors.textMuted}
+                        keyboardType="decimal-pad"
+                      />
+                    </View>
+                  </View>
+
+                  <View style={styles.configField}>
+                    <View style={styles.configFieldLabelRow}>
+                      <TrendingDown size={12} color={Colors.textSecondary} />
+                      <Text style={styles.configFieldLabel}>Monthly Spend Target</Text>
+                    </View>
+                    <TextInput
+                      style={styles.configInput}
+                      value={config.bankConfig.monthlySpendTarget > 0 ? String(config.bankConfig.monthlySpendTarget) : ''}
+                      onChangeText={(t) => updateBankConfig('monthlySpendTarget', parseFloat(t) || 0)}
+                      placeholder="2500.00"
+                      placeholderTextColor={Colors.textMuted}
+                      keyboardType="decimal-pad"
+                    />
+                    <Text style={styles.configFieldHint}>
+                      Rough monthly expenditure for generating realistic debits
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              <Animated.View style={{ transform: [{ scale: scaleStatement }] }}>
+                <TouchableOpacity
+                  style={[styles.forgeButton, styles.forgeButtonGold]}
+                  onPress={handleForgeStatement}
+                  activeOpacity={0.8}
+                  disabled={isGeneratingStatement}
+                  testID="forge-statement-button"
+                >
+                  {isGeneratingStatement ? (
+                    <ActivityIndicator color="#0A0E1A" size="small" />
+                  ) : (
+                    <>
+                      <Landmark size={18} color="#0A0E1A" />
+                      <Text style={[styles.forgeButtonText, styles.forgeButtonTextDark]}>Forge Statement</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </Animated.View>
+            </View>
           </View>
         </View>
       )}
@@ -417,35 +432,36 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   content: {
+    paddingBottom: 20,
+  },
+  heroBg: {
     paddingHorizontal: 16,
     paddingTop: 8,
+    paddingBottom: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    marginBottom: 16,
   },
   hero: {
     alignItems: 'center',
-    paddingVertical: 24,
+    paddingVertical: 20,
   },
   heroIconWrap: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
-    backgroundColor: Colors.accent + '1A',
+    width: 58,
+    height: 58,
+    borderRadius: 18,
+    backgroundColor: 'rgba(34,211,197,0.12)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 14,
-  },
-  heroIconInner: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: Colors.accent + '30',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(34,211,197,0.2)',
   },
   heroTitle: {
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: '800' as const,
     color: Colors.text,
-    letterSpacing: -0.5,
+    letterSpacing: -0.8,
   },
   heroSubtitle: {
     fontSize: 14,
@@ -459,15 +475,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
     marginBottom: 20,
+    paddingHorizontal: 16,
   },
   statCard: {
     flex: 1,
     backgroundColor: Colors.card,
     borderRadius: 14,
-    padding: 14,
-    alignItems: 'center',
+    overflow: 'hidden',
+    flexDirection: 'row',
     borderWidth: 1,
     borderColor: Colors.border,
+  },
+  statAccent: {
+    width: 4,
+  },
+  statContent: {
+    flex: 1,
+    padding: 12,
+    alignItems: 'center',
     gap: 4,
   },
   statValue: {
@@ -476,12 +501,15 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   statLabel: {
-    fontSize: 11,
+    fontSize: 10,
     color: Colors.textMuted,
-    fontWeight: '500' as const,
+    fontWeight: '600' as const,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.5,
   },
   templatesSection: {
     marginBottom: 16,
+    paddingHorizontal: 16,
   },
   sectionTitle: {
     fontSize: 12,
@@ -517,6 +545,7 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     gap: 6,
     marginBottom: 8,
+    marginHorizontal: 16,
   },
   blankButtonText: {
     fontSize: 14,
@@ -526,6 +555,7 @@ const styles = StyleSheet.create({
   forgeArea: {
     marginTop: 8,
     gap: 14,
+    paddingHorizontal: 16,
   },
   forgeDivider: {
     height: 1,
@@ -534,10 +564,18 @@ const styles = StyleSheet.create({
   },
   forgeCard: {
     backgroundColor: Colors.card,
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: Colors.border,
+    flexDirection: 'row',
+    overflow: 'hidden',
+  },
+  forgeCardEdge: {
+    width: 4,
+  },
+  forgeCardInner: {
+    flex: 1,
+    padding: 16,
     gap: 12,
   },
   forgeCardHeader: {
@@ -549,7 +587,6 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 13,
-    backgroundColor: Colors.accent + '18',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -667,7 +704,7 @@ const styles = StyleSheet.create({
   },
   lengthOptionActive: {
     borderColor: Colors.accent,
-    backgroundColor: Colors.accent + '15',
+    backgroundColor: Colors.accentDim,
   },
   lengthOptionText: {
     fontSize: 13,
@@ -679,23 +716,32 @@ const styles = StyleSheet.create({
   },
   forgeButton: {
     backgroundColor: Colors.accent,
-    borderRadius: 14,
+    borderRadius: 26,
     paddingVertical: 15,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+    shadowColor: Colors.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
   },
-  forgeButtonStatement: {
-    backgroundColor: '#FFCC00',
+  forgeButtonGold: {
+    backgroundColor: Colors.gold,
+    shadowColor: Colors.gold,
   },
   forgeButtonText: {
     fontSize: 16,
     fontWeight: '800' as const,
-    color: Colors.background,
+    color: '#fff',
     letterSpacing: 0.3,
   },
+  forgeButtonTextDark: {
+    color: '#0A0E1A',
+  },
   bottomPad: {
-    height: 40,
+    height: 90,
   },
 });

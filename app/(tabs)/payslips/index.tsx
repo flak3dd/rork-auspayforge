@@ -111,43 +111,49 @@ export default function PayslipsScreen() {
   }
 
   const currentPayslip = output.payslips[activeIndex];
+  const totalSlips = output.payslips.length;
 
   return (
     <View style={styles.container}>
-      <View style={styles.templateBar}>
-        <TouchableOpacity
-          style={[styles.templateBtn, payslipTemplate === 'general' && styles.templateBtnActive]}
-          onPress={() => handleTemplateSwitch('general')}
-          activeOpacity={0.7}
-        >
-          <Briefcase size={14} color={payslipTemplate === 'general' ? Colors.accent : Colors.textMuted} />
-          <Text style={[styles.templateBtnText, payslipTemplate === 'general' && styles.templateBtnTextActive]}>General</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.templateBtn, payslipTemplate === 'construction' && styles.templateBtnActive]}
-          onPress={() => handleTemplateSwitch('construction')}
-          activeOpacity={0.7}
-        >
-          <HardHat size={14} color={payslipTemplate === 'construction' ? '#FF9500' : Colors.textMuted} />
-          <Text style={[styles.templateBtnText, payslipTemplate === 'construction' && styles.templateBtnTextActive, payslipTemplate === 'construction' && { color: '#FF9500' }]}>Construction</Text>
-        </TouchableOpacity>
+      <View style={styles.segmentedBar}>
+        <View style={styles.segmentedInner}>
+          <TouchableOpacity
+            style={[styles.segmentBtn, payslipTemplate === 'general' && styles.segmentBtnActive]}
+            onPress={() => handleTemplateSwitch('general')}
+            activeOpacity={0.7}
+          >
+            <Briefcase size={14} color={payslipTemplate === 'general' ? Colors.accent : Colors.textMuted} />
+            <Text style={[styles.segmentBtnText, payslipTemplate === 'general' && styles.segmentBtnTextActive]}>General</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.segmentBtn, payslipTemplate === 'construction' && styles.segmentBtnActiveOrange]}
+            onPress={() => handleTemplateSwitch('construction')}
+            activeOpacity={0.7}
+          >
+            <HardHat size={14} color={payslipTemplate === 'construction' ? Colors.gold : Colors.textMuted} />
+            <Text style={[styles.segmentBtnText, payslipTemplate === 'construction' && styles.segmentBtnTextActiveOrange]}>Construction</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.paymentInfo}>
-        <View style={styles.paymentInfoLeft}>
-          <View style={styles.paymentDateBadge}>
-            <Calendar size={13} color={Colors.accent} />
-            <Text style={styles.paymentDateText}>
-              {fmtShortDate(currentPayslip.period.startDate)} – {fmtShortDate(currentPayslip.period.endDate)}
+        <View style={[styles.paymentInfoAccent, { backgroundColor: Colors.accent }]} />
+        <View style={styles.paymentInfoContent}>
+          <View style={styles.paymentInfoLeft}>
+            <View style={styles.paymentDateBadge}>
+              <Calendar size={13} color={Colors.accent} />
+              <Text style={styles.paymentDateText}>
+                {fmtShortDate(currentPayslip.period.startDate)} – {fmtShortDate(currentPayslip.period.endDate)}
+              </Text>
+            </View>
+            <Text style={styles.paidOnText}>
+              Paid {fmtShortDate(currentPayslip.period.paymentDate)}
             </Text>
           </View>
-          <Text style={styles.paidOnText}>
-            Paid {fmtShortDate(currentPayslip.period.paymentDate)}
-          </Text>
-        </View>
-        <View style={styles.paymentInfoRight}>
-          <Text style={styles.netPayLabel}>Net Pay</Text>
-          <Text style={styles.netPayAmount}>${fmt(currentPayslip.netPay)}</Text>
+          <View style={styles.paymentInfoRight}>
+            <Text style={styles.netPayLabel}>Net Pay</Text>
+            <Text style={styles.netPayAmount}>${fmt(currentPayslip.netPay)}</Text>
+          </View>
         </View>
       </View>
 
@@ -160,22 +166,22 @@ export default function PayslipsScreen() {
           <ChevronLeft size={20} color={activeIndex === 0 ? Colors.textMuted : Colors.accent} />
         </TouchableOpacity>
         <View style={styles.navCenter}>
-          <Text style={styles.navTitle}>Period {activeIndex + 1} of {output.payslips.length}</Text>
-          <View style={styles.dots}>
-            {output.payslips.map((_, i) => (
-              <View
-                key={i}
-                style={[styles.dot, i === activeIndex && styles.dotActive]}
-              />
-            ))}
+          <Text style={styles.navTitle}>Period {activeIndex + 1} of {totalSlips}</Text>
+          <View style={styles.progressTrack}>
+            <View
+              style={[
+                styles.progressFill,
+                { width: `${((activeIndex + 1) / totalSlips) * 100}%` },
+              ]}
+            />
           </View>
         </View>
         <TouchableOpacity
           onPress={handleNext}
-          style={[styles.navButton, activeIndex === output.payslips.length - 1 && styles.navButtonDisabled]}
-          disabled={activeIndex === output.payslips.length - 1}
+          style={[styles.navButton, activeIndex === totalSlips - 1 && styles.navButtonDisabled]}
+          disabled={activeIndex === totalSlips - 1}
         >
-          <ChevronRight size={20} color={activeIndex === output.payslips.length - 1 ? Colors.textMuted : Colors.accent} />
+          <ChevronRight size={20} color={activeIndex === totalSlips - 1 ? Colors.textMuted : Colors.accent} />
         </TouchableOpacity>
       </View>
 
@@ -209,30 +215,30 @@ export default function PayslipsScreen() {
       <View style={styles.bottomBar}>
         <View style={styles.exportRow}>
           <TouchableOpacity
-            style={styles.exportSmallBtn}
+            style={styles.exportPill}
             onPress={handleExportCurrent}
             activeOpacity={0.7}
             disabled={isExporting}
           >
             <Download size={15} color={Colors.accent} />
-            <Text style={styles.exportSmallText}>{isExporting ? 'Exporting...' : 'This Slip'}</Text>
+            <Text style={styles.exportPillText}>{isExporting ? 'Exporting...' : 'This Slip'}</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.exportSmallBtn}
+            style={styles.exportPill}
             onPress={handleExportAll}
             activeOpacity={0.7}
             disabled={isExporting}
           >
             <Share2 size={15} color={Colors.accent} />
-            <Text style={styles.exportSmallText}>{isExporting ? 'Exporting...' : 'All Slips'}</Text>
+            <Text style={styles.exportPillText}>{isExporting ? 'Exporting...' : 'All Slips'}</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.viewToggle}
+            style={styles.exportPill}
             onPress={toggleViewMode}
             activeOpacity={0.7}
           >
             <FileText size={15} color={Colors.accent} />
-            <Text style={styles.exportSmallText}>{viewMode === 'card' ? 'HTML' : 'Card'}</Text>
+            <Text style={styles.exportPillText}>{viewMode === 'card' ? 'HTML' : 'Card'}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -275,14 +281,20 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
-  templateBar: {
-    flexDirection: 'row',
+  segmentedBar: {
     paddingHorizontal: 16,
     paddingTop: 10,
     paddingBottom: 4,
-    gap: 8,
   },
-  templateBtn: {
+  segmentedInner: {
+    flexDirection: 'row',
+    backgroundColor: Colors.card,
+    borderRadius: 12,
+    padding: 3,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  segmentBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
@@ -290,34 +302,45 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 9,
     borderRadius: 10,
-    backgroundColor: Colors.card,
-    borderWidth: 1,
-    borderColor: Colors.border,
   },
-  templateBtnActive: {
-    borderColor: Colors.accent,
-    backgroundColor: Colors.accent + '15',
+  segmentBtnActive: {
+    backgroundColor: Colors.accentDim,
   },
-  templateBtnText: {
+  segmentBtnActiveOrange: {
+    backgroundColor: Colors.goldDim,
+  },
+  segmentBtnText: {
     fontSize: 13,
     fontWeight: '600' as const,
     color: Colors.textMuted,
   },
-  templateBtnTextActive: {
+  segmentBtnTextActive: {
     color: Colors.accent,
+    fontWeight: '700' as const,
+  },
+  segmentBtnTextActiveOrange: {
+    color: Colors.gold,
     fontWeight: '700' as const,
   },
   paymentInfo: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     marginHorizontal: 16,
     marginTop: 10,
     backgroundColor: Colors.card,
-    borderRadius: 12,
-    padding: 14,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: Colors.border,
+    overflow: 'hidden',
+  },
+  paymentInfoAccent: {
+    width: 4,
+  },
+  paymentInfoContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 14,
   },
   paymentInfoLeft: {
     gap: 4,
@@ -374,7 +397,9 @@ const styles = StyleSheet.create({
     opacity: 0.4,
   },
   navCenter: {
+    flex: 1,
     alignItems: 'center',
+    paddingHorizontal: 16,
     gap: 6,
   },
   navTitle: {
@@ -382,20 +407,17 @@ const styles = StyleSheet.create({
     fontWeight: '700' as const,
     color: Colors.text,
   },
-  dots: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+  progressTrack: {
+    width: '100%',
+    height: 4,
+    borderRadius: 2,
     backgroundColor: Colors.border,
+    overflow: 'hidden',
   },
-  dotActive: {
+  progressFill: {
+    height: 4,
+    borderRadius: 2,
     backgroundColor: Colors.accent,
-    width: 18,
-    borderRadius: 3,
   },
   carousel: {
     paddingHorizontal: 16,
@@ -429,33 +451,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
   },
-  exportSmallBtn: {
+  exportPill: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 10,
-    borderRadius: 10,
+    paddingVertical: 11,
+    borderRadius: 22,
     backgroundColor: Colors.card,
     borderWidth: 1,
-    borderColor: Colors.accent + '30',
+    borderColor: Colors.accentDim,
   },
-  exportSmallText: {
+  exportPillText: {
     fontSize: 13,
     fontWeight: '600' as const,
     color: Colors.accent,
-  },
-  viewToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: Colors.accent + '30',
-    backgroundColor: Colors.card,
   },
 });

@@ -52,7 +52,10 @@ export default React.memo(function PayslipCard({ payslip, index }: PayslipCardPr
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>EARNINGS</Text>
+        <View style={styles.sectionTitleRow}>
+          <View style={[styles.sectionDot, { backgroundColor: Colors.success }]} />
+          <Text style={styles.sectionTitle}>EARNINGS</Text>
+        </View>
         <View style={styles.tableHeader}>
           <Text style={[styles.tableHeaderText, styles.descCol]}>Description</Text>
           <Text style={[styles.tableHeaderText, styles.numCol]}>Hours</Text>
@@ -63,20 +66,23 @@ export default React.memo(function PayslipCard({ payslip, index }: PayslipCardPr
         {payslip.earnings.map((e, i) => (
           <View key={i} style={styles.tableRow}>
             <Text style={[styles.tableCell, styles.descCol]} numberOfLines={1}>{e.description}</Text>
-            <Text style={[styles.tableCell, styles.numCol]}>{e.hours > 0 ? e.hours.toFixed(1) : '-'}</Text>
-            <Text style={[styles.tableCell, styles.numCol]}>{e.rate > 0 ? fmt(e.rate) : '-'}</Text>
-            <Text style={[styles.tableCell, styles.numCol]}>{fmt(e.amount)}</Text>
-            <Text style={[styles.tableCell, styles.numCol]}>{fmt(e.ytd)}</Text>
+            <Text style={[styles.tableCellNum, styles.numCol]}>{e.hours > 0 ? e.hours.toFixed(1) : '-'}</Text>
+            <Text style={[styles.tableCellNum, styles.numCol]}>{e.rate > 0 ? fmt(e.rate) : '-'}</Text>
+            <Text style={[styles.tableCellNum, styles.numCol]}>{fmt(e.amount)}</Text>
+            <Text style={[styles.tableCellNum, styles.numCol]}>{fmt(e.ytd)}</Text>
           </View>
         ))}
         <View style={styles.totalRow}>
           <Text style={[styles.totalLabel, styles.descCol]}>Gross Pay</Text>
-          <Text style={styles.totalValue}>${fmt(payslip.grossPay)}</Text>
+          <Text style={[styles.totalValue, { color: Colors.success }]}>${fmt(payslip.grossPay)}</Text>
         </View>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>DEDUCTIONS</Text>
+        <View style={styles.sectionTitleRow}>
+          <View style={[styles.sectionDot, { backgroundColor: Colors.error }]} />
+          <Text style={styles.sectionTitle}>DEDUCTIONS</Text>
+        </View>
         <View style={styles.tableHeader}>
           <Text style={[styles.tableHeaderText, { flex: 2 }]}>Description</Text>
           <Text style={[styles.tableHeaderText, styles.numCol]}>Amount</Text>
@@ -85,8 +91,8 @@ export default React.memo(function PayslipCard({ payslip, index }: PayslipCardPr
         {payslip.deductions.map((d, i) => (
           <View key={i} style={styles.tableRow}>
             <Text style={[styles.tableCell, { flex: 2 }]} numberOfLines={1}>{d.description}</Text>
-            <Text style={[styles.tableCell, styles.numCol]}>{fmt(d.amount)}</Text>
-            <Text style={[styles.tableCell, styles.numCol]}>{fmt(d.ytd)}</Text>
+            <Text style={[styles.tableCellNum, styles.numCol]}>{fmt(d.amount)}</Text>
+            <Text style={[styles.tableCellNum, styles.numCol]}>{fmt(d.ytd)}</Text>
           </View>
         ))}
         <View style={styles.totalRow}>
@@ -101,7 +107,10 @@ export default React.memo(function PayslipCard({ payslip, index }: PayslipCardPr
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>SUPERANNUATION</Text>
+        <View style={styles.sectionTitleRow}>
+          <View style={[styles.sectionDot, { backgroundColor: Colors.accent }]} />
+          <Text style={styles.sectionTitle}>SUPERANNUATION</Text>
+        </View>
         <View style={styles.superRow}>
           <Text style={styles.superLabel}>SG Contribution (12%)</Text>
           <Text style={styles.superValue}>${fmt(payslip.superAmount)}</Text>
@@ -117,7 +126,10 @@ export default React.memo(function PayslipCard({ payslip, index }: PayslipCardPr
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>LEAVE BALANCES</Text>
+        <View style={styles.sectionTitleRow}>
+          <View style={[styles.sectionDot, { backgroundColor: Colors.gold }]} />
+          <Text style={styles.sectionTitle}>LEAVE BALANCES</Text>
+        </View>
         {payslip.leave.map((l, i) => (
           <View key={i} style={styles.leaveBlock}>
             <Text style={styles.leaveType}>{l.type}</Text>
@@ -144,7 +156,10 @@ export default React.memo(function PayslipCard({ payslip, index }: PayslipCardPr
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>PAYMENT DETAILS</Text>
+        <View style={styles.sectionTitleRow}>
+          <View style={[styles.sectionDot, { backgroundColor: Colors.blue }]} />
+          <Text style={styles.sectionTitle}>PAYMENT DETAILS</Text>
+        </View>
         <View style={styles.superRow}>
           <Text style={styles.superLabel}>Account</Text>
           <Text style={styles.superValue}>{payslip.bankAccount}</Text>
@@ -156,7 +171,10 @@ export default React.memo(function PayslipCard({ payslip, index }: PayslipCardPr
       </View>
 
       <View style={styles.ytdSection}>
-        <Text style={styles.sectionTitle}>YEAR TO DATE</Text>
+        <View style={styles.sectionTitleRow}>
+          <View style={[styles.sectionDot, { backgroundColor: Colors.teal }]} />
+          <Text style={styles.sectionTitle}>YEAR TO DATE</Text>
+        </View>
         <View style={styles.ytdGrid}>
           <View style={styles.ytdItem}>
             <Text style={styles.ytdLabel}>Gross</Text>
@@ -184,7 +202,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.card,
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 20,
   },
   header: {
@@ -208,14 +226,14 @@ const styles = StyleSheet.create({
   periodBadge: {
     marginTop: 10,
     backgroundColor: Colors.accent,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 4,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 5,
   },
   periodLabel: {
     fontSize: 13,
     fontWeight: '700' as const,
-    color: Colors.background,
+    color: '#fff',
   },
   infoGrid: {
     flexDirection: 'row',
@@ -228,7 +246,7 @@ const styles = StyleSheet.create({
   infoLabel: {
     fontSize: 11,
     color: Colors.textMuted,
-    textTransform: 'uppercase',
+    textTransform: 'uppercase' as const,
     letterSpacing: 0.5,
     marginBottom: 2,
   },
@@ -247,12 +265,22 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: Colors.border,
   },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 10,
+  },
+  sectionDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
   sectionTitle: {
     fontSize: 12,
     fontWeight: '700' as const,
     color: Colors.accent,
     letterSpacing: 1,
-    marginBottom: 10,
   },
   tableHeader: {
     flexDirection: 'row',
@@ -265,7 +293,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600' as const,
     color: Colors.textMuted,
-    textTransform: 'uppercase',
+    textTransform: 'uppercase' as const,
   },
   descCol: {
     flex: 2,
@@ -281,6 +309,11 @@ const styles = StyleSheet.create({
   tableCell: {
     fontSize: 12,
     color: Colors.textSecondary,
+  },
+  tableCellNum: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    fontVariant: ['tabular-nums'] as const,
   },
   totalRow: {
     flexDirection: 'row',
@@ -299,18 +332,23 @@ const styles = StyleSheet.create({
   totalValue: {
     fontSize: 15,
     fontWeight: '800' as const,
-    color: Colors.success,
+    fontVariant: ['tabular-nums'] as const,
   },
   netPayBox: {
     marginTop: 16,
     backgroundColor: Colors.cardElevated,
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: Colors.accent,
+    shadowColor: Colors.accent,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 4,
   },
   netPayLabel: {
     fontSize: 16,
@@ -322,6 +360,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '800' as const,
     color: Colors.accent,
+    fontVariant: ['tabular-nums'] as const,
   },
   superRow: {
     flexDirection: 'row',
@@ -336,6 +375,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600' as const,
     color: Colors.text,
+    fontVariant: ['tabular-nums'] as const,
   },
   leaveBlock: {
     marginBottom: 10,
@@ -353,7 +393,7 @@ const styles = StyleSheet.create({
   leaveItem: {
     flex: 1,
     backgroundColor: Colors.cardElevated,
-    borderRadius: 8,
+    borderRadius: 10,
     padding: 8,
     alignItems: 'center',
   },
@@ -366,6 +406,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700' as const,
     color: Colors.text,
+    fontVariant: ['tabular-nums'] as const,
   },
   ytdSection: {
     marginTop: 16,
@@ -393,9 +434,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700' as const,
     color: Colors.text,
+    fontVariant: ['tabular-nums'] as const,
   },
   footer: {
-    textAlign: 'center',
+    textAlign: 'center' as const,
     fontSize: 10,
     color: Colors.textMuted,
     marginTop: 20,
