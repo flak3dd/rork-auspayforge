@@ -286,6 +286,35 @@ export default function ConfigureScreen() {
               ))}
             </View>
 
+            <View style={styles.toggleRow}>
+              <Text style={styles.toggleLabel}>Exact Pay Per Period</Text>
+              <View style={styles.exactPayRow}>
+                <Switch
+                  value={config.payConfig.useExactPay}
+                  onValueChange={(v) => {
+                    updateConfig('payConfig', { ...config.payConfig, useExactPay: v });
+                    Haptics.selectionAsync();
+                  }}
+                  trackColor={{ false: Colors.border, true: Colors.accent + '60' }}
+                  thumbColor={config.payConfig.useExactPay ? Colors.accent : Colors.textMuted}
+                />
+                <Text style={styles.exactPayHint}>
+                  {config.payConfig.useExactPay ? 'Using exact amount' : 'Calculated from salary/rate'}
+                </Text>
+              </View>
+            </View>
+
+            {config.payConfig.useExactPay && (
+              <FormField
+                label={`Gross Pay Per ${config.payConfig.frequency === 'weekly' ? 'Week' : config.payConfig.frequency === 'fortnightly' ? 'Fortnight' : 'Month'}`}
+                value={config.payConfig.exactPayPerPeriod > 0 ? String(config.payConfig.exactPayPerPeriod) : ''}
+                onChangeText={(t) => updateConfig('payConfig', { ...config.payConfig, exactPayPerPeriod: parseFloat(t) || 0 })}
+                placeholder="2500.00"
+                keyboardType="decimal-pad"
+                suffix="$"
+              />
+            )}
+
             <FormField
               label="Start Date"
               value={config.payConfig.startDate}
@@ -766,6 +795,16 @@ const styles = StyleSheet.create({
   },
   forgeButtonTextDisabled: {
     color: Colors.textMuted,
+  },
+  exactPayRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  exactPayHint: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    fontStyle: 'italic' as const,
   },
   bottomPad: {
     height: 40,

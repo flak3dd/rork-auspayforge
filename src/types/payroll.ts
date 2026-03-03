@@ -23,6 +23,8 @@ export interface PayConfig {
   weeklyHours: number;
   frequency: PayFrequency;
   startDate: string;
+  useExactPay: boolean;
+  exactPayPerPeriod: number;
 }
 
 export interface SuperConfig {
@@ -184,6 +186,8 @@ export const DEFAULT_CONFIG: AppConfig = {
     weeklyHours: 38,
     frequency: 'fortnightly',
     startDate: new Date().toISOString().split('T')[0],
+    useExactPay: false,
+    exactPayPerPeriod: 0,
   },
   superConfig: {
     fundName: 'AustralianSuper',

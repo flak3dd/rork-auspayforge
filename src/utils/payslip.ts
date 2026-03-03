@@ -88,7 +88,23 @@ export function generatePayslips(config: AppConfig): Payslip[] {
     let gross = 0;
     let overtimeComponent = 0;
 
-    if (config.payConfig.basis === 'salary') {
+    if (config.payConfig.useExactPay && config.payConfig.exactPayPerPeriod > 0) {
+      const base = Math.round(config.payConfig.exactPayPerPeriod * 100) / 100;
+      const hoursMultiplier = config.payConfig.frequency === 'weekly' ? 1 : config.payConfig.frequency === 'fortnightly' ? 2 : 4.33;
+      const hours = config.payConfig.weeklyHours * hoursMultiplier;
+      const impliedRate = Math.round((base / hours) * 100) / 100;
+      const key = config.payConfig.basis === 'salary' ? 'Base Salary' : 'Ordinary Hours';
+      ytdEarnings[key] = (ytdEarnings[key] || 0) + base;
+      earnings.push({
+        description: key,
+        hours,
+        rate: impliedRate,
+        amount: base,
+        ytd: ytdEarnings[key],
+        type: 'ordinary',
+      });
+      gross += base;
+    } else if (config.payConfig.basis === 'salary') {
       const base = Math.round((config.payConfig.annualSalary / ppy) * 100) / 100;
       const key = 'Base Salary';
       ytdEarnings[key] = (ytdEarnings[key] || 0) + base;
