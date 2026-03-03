@@ -1,6 +1,3 @@
-import * as fs from 'fs';
-import * as path from 'path';
-
 interface IncomeSource {
   name: string;
   amount: number;
@@ -43,18 +40,7 @@ const config: Config = {
   monthly_spend_target: 2500.00
 };
 
-const configFile = "config.json";
 
-if (fs.existsSync(configFile)) {
-  try {
-    const data = fs.readFileSync(configFile, 'utf8');
-    Object.assign(config, JSON.parse(data));
-  } catch (err) {
-    console.warn(`Warning: ${configFile} is not a valid JSON file. Skipping.`);
-  }
-} else {
-  fs.writeFileSync(configFile, JSON.stringify(config, null, 2), 'utf8');
-}
 
 // =============================================
 // GENERATE TRANSACTIONS (equivalent to transgen.py)
@@ -394,11 +380,5 @@ for (let p = 2; p <= config.total_pages; p++) {
 
 html += `</body></html>`;
 
-fs.writeFileSync("commbank_statement_FINAL.html", html, 'utf8');
-
-console.log("✅ commbank_statement_FINAL.html SAVED");
-console.log("• Font changed to Helvetica light (weight 300), table to 9pt");
-console.log("• Fixed NameError: changed random.choice(recipient) to random.choice(recipient)");
-console.log("• Fixed ValueError: properly handle comma in float conversion with replace(',', '')");
-console.log("• Drop bar.png next to the file → Open in Chrome → Print to PDF");
-console.log("Perfect match. Done.");
+export { generateStatement, config, html };
+export type { Transaction, Config, IncomeSource };
