@@ -157,7 +157,7 @@ export default function StatementScreen() {
     setViewMode(prev => prev === 'overview' ? 'document' : 'overview');
   }, []);
 
-  const handleRegenerate = useCallback(() => {
+  const handleRegenerate = useCallback(async () => {
     const iso = parseInputToISO(startDateInput);
     if (!iso) {
       console.log('[Statement] Invalid date input:', startDateInput);
@@ -166,7 +166,7 @@ export default function StatementScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsRegenerating(true);
     try {
-      regenerateStatement(iso, selectedLength, {
+      await regenerateStatement(iso, selectedLength, {
         openingBalance: parseFloat(openingBalance) || 0,
         closingBalance: parseFloat(closingBalance) || 0,
         transactionDensity: density,
@@ -182,6 +182,8 @@ export default function StatementScreen() {
         suburbs: [suburb1.trim() || 'CABOOLTURE', suburb2.trim() || 'MORAYFIELD', suburb3.trim() || 'BURPENGARY'],
       });
       console.log('[Statement] Regenerated with all custom options');
+    } catch (error) {
+      console.error('[Statement] Regeneration error:', error);
     } finally {
       setIsRegenerating(false);
     }

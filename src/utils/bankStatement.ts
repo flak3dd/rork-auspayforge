@@ -144,7 +144,12 @@ export function generateBankStatement(config: AppConfig, payslips: Payslip[]): B
 
   const paymentDates = new Map<string, number>();
   for (const ps of payslips) {
-    const key = ps.period.paymentDate.toISOString().split('T')[0];
+    const payDate = new Date(ps.period.paymentDate);
+    if (isNaN(payDate.getTime())) {
+      console.warn('[BankStatement] Invalid paymentDate for payslip, skipping:', ps.period.paymentDate);
+      continue;
+    }
+    const key = payDate.toISOString().split('T')[0];
     paymentDates.set(key, ps.netPay);
   }
 
@@ -353,12 +358,15 @@ export function generateBankStatement(config: AppConfig, payslips: Payslip[]): B
   const openingTx = txs.shift()!;
   const dayGroups = new Map<string, BankTransaction[]>();
   for (const tx of txs) {
-    const key = tx.date.toISOString().split('T')[0];
+    const txDate = new Date(tx.date);
+    const key = txDate.toISOString().split('T')[0];
     if (!dayGroups.has(key)) dayGroups.set(key, []);
     dayGroups.get(key)!.push(tx);
   }
+  const sortedDayKeys = Array.from(dayGroups.keys()).sort();
   const shuffledTxs: BankTransaction[] = [openingTx];
-  for (const [, dayTxs] of dayGroups) {
+  for (const dayKey of sortedDayKeys) {
+    const dayTxs = dayGroups.get(dayKey)!;
     for (let i = dayTxs.length - 1; i > 0; i--) {
       const j = Math.floor(rand() * (i + 1));
       [dayTxs[i], dayTxs[j]] = [dayTxs[j], dayTxs[i]];
