@@ -13,17 +13,25 @@ import { generateBankStatement } from '@/utils/bankStatement';
 import { isConfigValid } from '@/utils/validation';
 import { generateGeneralPayslipHTML } from '@/lib/templates/generalPayslipTemplate';
 import { generateConstructionPayslipHTML } from '@/lib/templates/constructionPayslipTemplate';
+import { generateAdminFortnightlyPayslipHTML } from '@/lib/templates/adminFortnightlyPayslipTemplate';
+import { generateExecutiveMonthlyPayslipHTML } from '@/lib/templates/executiveMonthlyPayslipTemplate';
 import { generateStatementHTML, StatementAssets } from '@/utils/statementHTML';
 import { loadStatementAssets } from '@/utils/assetLoader';
 
-export type PayslipTemplateType = 'general' | 'construction';
+export type PayslipTemplateType = 'general' | 'construction' | 'admin' | 'executive';
 
 function generatePayslipHTML(payslip: Payslip, index: number, templateType: PayslipTemplateType): string {
   console.log('[PayrollProvider] Generating HTML with template:', templateType, 'for period', index + 1);
-  if (templateType === 'construction') {
-    return generateConstructionPayslipHTML(payslip, index);
+  switch (templateType) {
+    case 'construction':
+      return generateConstructionPayslipHTML(payslip, index);
+    case 'admin':
+      return generateAdminFortnightlyPayslipHTML(payslip, index);
+    case 'executive':
+      return generateExecutiveMonthlyPayslipHTML(payslip, index);
+    default:
+      return generateGeneralPayslipHTML(payslip, index);
   }
-  return generateGeneralPayslipHTML(payslip, index);
 }
 
 export const [PayrollProvider, usePayroll] = createContextHook(() => {
@@ -67,6 +75,8 @@ export const [PayrollProvider, usePayroll] = createContextHook(() => {
     const dept = cfg.employee.department.toLowerCase();
     const cls = cfg.employee.classification.toLowerCase();
     const employer = cfg.employer.name.toLowerCase();
+    const freq = cfg.payConfig.frequency;
+    const salary = cfg.payConfig.annualSalary;
     if (
       dept.includes('construction') ||
       dept.includes('site') ||
@@ -77,6 +87,29 @@ export const [PayrollProvider, usePayroll] = createContextHook(() => {
       employer.includes('build')
     ) {
       return 'construction';
+    }
+    if (
+      freq === 'monthly' &&
+      (salary >= 150000 ||
+        dept.includes('executive') ||
+        dept.includes('leadership') ||
+        cls.includes('director') ||
+        cls.includes('executive') ||
+        cls.includes('manager'))
+    ) {
+      return 'executive';
+    }
+    if (
+      dept.includes('admin') ||
+      dept.includes('customer') ||
+      dept.includes('office') ||
+      cls.includes('admin') ||
+      cls.includes('officer') ||
+      cls.includes('clerk') ||
+      employer.includes('council') ||
+      employer.includes('government')
+    ) {
+      return 'admin';
     }
     return 'general';
   }, []);

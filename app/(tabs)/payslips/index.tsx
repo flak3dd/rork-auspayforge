@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   Dimensions,
 } from 'react-native';
-import { FileText, ChevronLeft, ChevronRight, HardHat, Briefcase, Download, Share2, Calendar } from 'lucide-react-native';
+import { FileText, ChevronLeft, ChevronRight, HardHat, Briefcase, Download, Share2, Calendar, ClipboardList, Crown } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { usePayroll, PayslipTemplateType } from '@/providers/PayrollProvider';
@@ -16,6 +16,21 @@ import HTMLRenderer from '@/components/HTMLRenderer';
 import { exportHTMLToPDF, exportAllPayslips } from '@/utils/export';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+type TemplateOption = {
+  key: PayslipTemplateType;
+  label: string;
+  icon: typeof Briefcase;
+  activeColor: string;
+  activeBg: string;
+};
+
+const TEMPLATE_OPTIONS: TemplateOption[] = [
+  { key: 'general', label: 'General', icon: Briefcase, activeColor: Colors.accent, activeBg: Colors.accentDim },
+  { key: 'construction', label: 'Construction', icon: HardHat, activeColor: Colors.gold, activeBg: Colors.goldDim },
+  { key: 'admin', label: 'Admin', icon: ClipboardList, activeColor: Colors.cyan, activeBg: '#06B6D420' },
+  { key: 'executive', label: 'Executive', icon: Crown, activeColor: '#A78BFA', activeBg: '#A78BFA20' },
+];
 
 function fmt(n: number): string {
   return Math.abs(n).toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -115,26 +130,30 @@ export default function PayslipsScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.segmentedBar}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.segmentedBar}
+        contentContainerStyle={styles.segmentedScroll}
+      >
         <View style={styles.segmentedInner}>
-          <TouchableOpacity
-            style={[styles.segmentBtn, payslipTemplate === 'general' && styles.segmentBtnActive]}
-            onPress={() => handleTemplateSwitch('general')}
-            activeOpacity={0.7}
-          >
-            <Briefcase size={14} color={payslipTemplate === 'general' ? Colors.accent : Colors.textMuted} />
-            <Text style={[styles.segmentBtnText, payslipTemplate === 'general' && styles.segmentBtnTextActive]}>General</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.segmentBtn, payslipTemplate === 'construction' && styles.segmentBtnActiveOrange]}
-            onPress={() => handleTemplateSwitch('construction')}
-            activeOpacity={0.7}
-          >
-            <HardHat size={14} color={payslipTemplate === 'construction' ? Colors.gold : Colors.textMuted} />
-            <Text style={[styles.segmentBtnText, payslipTemplate === 'construction' && styles.segmentBtnTextActiveOrange]}>Construction</Text>
-          </TouchableOpacity>
+          {TEMPLATE_OPTIONS.map((opt) => {
+            const isActive = payslipTemplate === opt.key;
+            const IconComp = opt.icon;
+            return (
+              <TouchableOpacity
+                key={opt.key}
+                style={[styles.segmentBtn, isActive && { backgroundColor: opt.activeBg }]}
+                onPress={() => handleTemplateSwitch(opt.key)}
+                activeOpacity={0.7}
+              >
+                <IconComp size={13} color={isActive ? opt.activeColor : Colors.textMuted} />
+                <Text style={[styles.segmentBtnText, isActive && { color: opt.activeColor, fontWeight: '700' as const }]}>{opt.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
-      </View>
+      </ScrollView>
 
       <View style={styles.paymentInfo}>
         <View style={[styles.paymentInfoAccent, { backgroundColor: Colors.accent }]} />
@@ -282,9 +301,12 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   segmentedBar: {
-    paddingHorizontal: 16,
     paddingTop: 10,
     paddingBottom: 4,
+    maxHeight: 52,
+  },
+  segmentedScroll: {
+    paddingHorizontal: 16,
   },
   segmentedInner: {
     flexDirection: 'row',
@@ -293,34 +315,21 @@ const styles = StyleSheet.create({
     padding: 3,
     borderWidth: 1,
     borderColor: Colors.border,
+    gap: 2,
   },
   segmentBtn: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: 5,
     paddingVertical: 9,
+    paddingHorizontal: 14,
     borderRadius: 10,
   },
-  segmentBtnActive: {
-    backgroundColor: Colors.accentDim,
-  },
-  segmentBtnActiveOrange: {
-    backgroundColor: Colors.goldDim,
-  },
   segmentBtnText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600' as const,
     color: Colors.textMuted,
-  },
-  segmentBtnTextActive: {
-    color: Colors.accent,
-    fontWeight: '700' as const,
-  },
-  segmentBtnTextActiveOrange: {
-    color: Colors.gold,
-    fontWeight: '700' as const,
   },
   paymentInfo: {
     flexDirection: 'row',
