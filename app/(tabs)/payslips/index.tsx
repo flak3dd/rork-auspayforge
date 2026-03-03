@@ -204,32 +204,34 @@ export default function PayslipsScreen() {
         </TouchableOpacity>
       </View>
 
-      {viewMode === 'card' ? (
-        <ScrollView
-          ref={scrollRef}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          onMomentumScrollEnd={handleScroll}
-          contentContainerStyle={styles.carousel}
-          decelerationRate="fast"
-          snapToInterval={SCREEN_WIDTH - 32}
-        >
-          {output.payslips.map((ps, i) => (
-            <View key={i} style={[styles.cardWrap, { width: SCREEN_WIDTH - 32 }]}>
-              <PayslipCard payslip={ps} index={i} />
-            </View>
-          ))}
-        </ScrollView>
-      ) : (
-        payslipHTMLs[activeIndex] ? (
-          <HTMLRenderer html={payslipHTMLs[activeIndex]} style={styles.htmlContainer} />
+      <View style={styles.contentArea}>
+        {viewMode === 'card' ? (
+          <ScrollView
+            ref={scrollRef}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onMomentumScrollEnd={handleScroll}
+            contentContainerStyle={styles.carousel}
+            decelerationRate="fast"
+            snapToInterval={SCREEN_WIDTH - 32}
+          >
+            {output.payslips.map((ps, i) => (
+              <View key={i} style={[styles.cardWrap, { width: SCREEN_WIDTH - 32 }]}>
+                <PayslipCard payslip={ps} index={i} />
+              </View>
+            ))}
+          </ScrollView>
         ) : (
-          <View style={styles.htmlEmptyBox}>
-            <Text style={styles.htmlEmptyText}>No HTML generated for this period</Text>
-          </View>
-        )
-      )}
+          payslipHTMLs[activeIndex] ? (
+            <HTMLRenderer html={payslipHTMLs[activeIndex]} style={styles.htmlContainer} />
+          ) : (
+            <View style={styles.htmlEmptyBox}>
+              <Text style={styles.htmlEmptyText}>No HTML generated for this period</Text>
+            </View>
+          )
+        )}
+      </View>
 
       <View style={styles.bottomBar}>
         <View style={styles.exportRow}>
@@ -427,6 +429,10 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 2,
     backgroundColor: Colors.accent,
+  },
+  contentArea: {
+    flex: 1,
+    minHeight: 0,
   },
   carousel: {
     paddingHorizontal: 16,
