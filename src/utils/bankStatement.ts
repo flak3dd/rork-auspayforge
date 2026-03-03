@@ -32,26 +32,46 @@ const INCOMING_MEMOS = [
   'superhero', 'Beaudine', 'Tnx', 'coin sets',
 ];
 
-const MERCHANTS: Record<string, string[]> = {
-  groceries: ['COLES EXPRESS', 'WOOLWORTHS', 'ALDI STORES', 'IGA MARKET', 'SPAR MORAYFIELD ROAD ORMOND AU AUS', 'SPAR MORAYFIELD'],
-  fuel: ['METRO PETROLEUM CABOOL', 'SHELL SERVICE', 'BP FUEL STOP', 'CALTEX', 'METRO PETROLEUM CABOOL ORMOND SOAU', 'AMPOL ELWOOD 11620F ORMOND AU'],
-  fast_food: ['MCDONALDS CABOOLTURE', 'KFC DRIVE-THRU', 'SUBWAY EAT FRESH', 'DOMINOS PIZZA', 'Hungry Jacks Morayfield AU', 'KFC ORMOND AU', 'MCDONALDS ORMOND ORMOND VICAU'],
-  liquor: ['BWS', 'LIQUORLAND', 'DAN MURPHYS', 'BWS 2432 ORMOND QL AUS', 'Morayfield Cellars ORMOND SoAU', 'Celebrations Palmview AU'],
-  convenience: ['7-ELEVEN', 'SPAR MORAYFIELD', 'NIGHTOWL CONVENIENCE', '7-ELEVEN 4216 ORMOND QL AUS'],
+const MERCHANT_TEMPLATES: Record<string, string[]> = {
+  groceries: ['COLES EXPRESS', 'WOOLWORTHS', 'ALDI STORES', 'IGA MARKET', 'SPAR {sub1} ROAD {sub2} AU AUS', 'SPAR {sub1}'],
+  fuel: ['METRO PETROLEUM {sub0}', 'SHELL SERVICE', 'BP FUEL STOP', 'CALTEX', 'METRO PETROLEUM {sub0} {sub1} SOAU', 'AMPOL {sub2} 11620F {sub1} AU'],
+  fast_food: ['MCDONALDS {sub0}', 'KFC DRIVE-THRU', 'SUBWAY EAT FRESH', 'DOMINOS PIZZA', 'Hungry Jacks {sub1} AU', 'KFC {sub2} AU', 'MCDONALDS {sub1} {sub1} VICAU'],
+  liquor: ['BWS', 'LIQUORLAND', 'DAN MURPHYS', 'BWS 2432 {sub2} QL AUS', '{sub1} Cellars {sub2} SoAU', 'Celebrations {sub1} AU'],
+  convenience: ['7-ELEVEN', 'SPAR {sub1}', 'NIGHTOWL CONVENIENCE', '7-ELEVEN 4216 {sub2} QL AUS'],
   online: ['eBay O*', 'AMAZON AU', 'ALIEXPRESS', 'ETSY SHOP', 'eBay O*22-12677-33273', 'eBay O*05-12685-86930', 'Google Cashman Casino Barangaroo AU AUS', 'bluemousesafepay.com 0031202993444 GB GB'],
   utilities: ['ENERGEX ELECTRICITY', 'TELSTRA MOBILE', 'OPTUS BROADBAND', 'WATER CORP BILL'],
 };
 
-const ATM_LOCATIONS = [
-  'WBC WESTPAC MORAYFIEL', 'ANZ ATM CABOOLTURE', 'CBA BRANCH NARANGBA', 'NAB ATM BURPENGARY',
-  'ETX MORAYFIELD TAVERN ELWOOD', 'ETX SUNDOWNER ELWOOD ELWOOD', 'Red NP-Banana Bender Palmview',
-  'ETX DECEPTION BAY TAV DECEPTION',
+function buildMerchants(suburbs: [string, string, string]): Record<string, string[]> {
+  const result: Record<string, string[]> = {};
+  for (const [cat, templates] of Object.entries(MERCHANT_TEMPLATES)) {
+    result[cat] = templates.map(t =>
+      t.replace(/\{sub0\}/g, suburbs[0])
+       .replace(/\{sub1\}/g, suburbs[1])
+       .replace(/\{sub2\}/g, suburbs[2])
+    );
+  }
+  return result;
+}
+
+const ATM_LOCATION_TEMPLATES = [
+  'WBC WESTPAC {sub1}', 'ANZ ATM {sub0}', 'CBA BRANCH {sub2}', 'NAB ATM {sub2}',
+  'ETX {sub1} TAVERN {sub1}', 'ETX SUNDOWNER {sub2} {sub2}', 'Red NP-Banana Bender {sub1}',
+  'ETX {sub0} TAV {sub0}',
 ];
+
+function buildATMLocations(suburbs: [string, string, string]): string[] {
+  return ATM_LOCATION_TEMPLATES.map(t =>
+    t.replace(/\{sub0\}/g, suburbs[0])
+     .replace(/\{sub1\}/g, suburbs[1])
+     .replace(/\{sub2\}/g, suburbs[2])
+  );
+}
 
 const TRANSFER_ACCOUNTS = ['xx3885', 'xx7400', 'xx400', 'xx7400'];
 const CARDLESS_MEMOS = ['coins', 'coin'];
 
-const MERCHANT_CATEGORIES = Object.keys(MERCHANTS);
+const MERCHANT_CATEGORIES = Object.keys(MERCHANT_TEMPLATES);
 
 function pick<T>(arr: T[], rand: () => number): T {
   return arr[Math.floor(rand() * arr.length)];
@@ -81,6 +101,10 @@ export function generateBankStatement(config: AppConfig, payslips: Payslip[]): B
   const rand = seededRandom(Date.now());
   const txs: BankTransaction[] = [];
   const bc = config.bankConfig;
+  const suburbs = bc.suburbs ?? ['CABOOLTURE', 'MORAYFIELD', 'BURPENGARY'];
+  const MERCHANTS = buildMerchants(suburbs);
+  const ATM_LOCATIONS = buildATMLocations(suburbs);
+  console.log('[BankStatement] Using suburbs:', suburbs);
 
   const densityMultiplier = bc.transactionDensity === 'low' ? 0.4
     : bc.transactionDensity === 'high' ? 1.4 : 1.0;
@@ -200,7 +224,8 @@ export function generateBankStatement(config: AppConfig, payslips: Payslip[]): B
             desc = `${merchant} Sydney AU AUS\nCard xx1043\nValue Date: ${formatDateSlash(priorDate)}`;
           }
         } else {
-          desc = `${merchant} CABOOLTURE QLD AUS\nCard xx1043\nValue Date: ${formatDateSlash(priorDate)}`;
+          const suburb = pick(suburbs, rand);
+          desc = `${merchant} ${suburb} QLD AUS\nCard xx1043\nValue Date: ${formatDateSlash(priorDate)}`;
         }
         balance = Math.round((balance - amount) * 100) / 100;
         txs.push({

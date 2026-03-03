@@ -36,6 +36,7 @@ import {
   Layers,
   Eye,
   EyeOff,
+  MapPin,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
@@ -119,6 +120,10 @@ export default function StatementScreen() {
   const [dailySpendMax, setDailySpendMax] = useState<string>(String(config.bankConfig.dailySpendMax));
   const [incomingTransferMin, setIncomingTransferMin] = useState<string>(String(config.bankConfig.incomingTransferMin));
   const [incomingTransferMax, setIncomingTransferMax] = useState<string>(String(config.bankConfig.incomingTransferMax));
+  const [suburb1, setSuburb1] = useState<string>(config.bankConfig.suburbs[0]);
+  const [suburb2, setSuburb2] = useState<string>(config.bankConfig.suburbs[1]);
+  const [suburb3, setSuburb3] = useState<string>(config.bankConfig.suburbs[2]);
+  const [showLocationSettings, setShowLocationSettings] = useState<boolean>(false);
 
   const [isRegenerating, setIsRegenerating] = useState<boolean>(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -172,6 +177,7 @@ export default function StatementScreen() {
         dailySpendMax: parseFloat(dailySpendMax) || 154,
         incomingTransferMin: parseFloat(incomingTransferMin) || 50,
         incomingTransferMax: parseFloat(incomingTransferMax) || 560,
+        suburbs: [suburb1.trim() || 'CABOOLTURE', suburb2.trim() || 'MORAYFIELD', suburb3.trim() || 'BURPENGARY'],
       });
       console.log('[Statement] Regenerated with all custom options');
     } finally {
@@ -181,7 +187,7 @@ export default function StatementScreen() {
     startDateInput, selectedLength, openingBalance, closingBalance,
     density, includePension, includeATM, includeCardlessCash, includeTransfers,
     dailySpendMin, dailySpendMax, incomingTransferMin, incomingTransferMax,
-    regenerateStatement,
+    suburb1, suburb2, suburb3, regenerateStatement,
   ]);
 
   const totalCredits = statement?.transactions.reduce((sum, tx) => sum + tx.credit, 0) ?? 0;
@@ -544,6 +550,86 @@ export default function StatementScreen() {
               setIncludeCardlessCash,
               <CreditCard size={16} color={Colors.teal} />,
             )}
+          </View>
+        )}
+      </View>
+
+      {/* Location / Suburbs */}
+      <View style={styles.settingsCard}>
+        <TouchableOpacity
+          style={styles.settingsHeader}
+          onPress={() => {
+            setShowLocationSettings(!showLocationSettings);
+            Haptics.selectionAsync();
+          }}
+          activeOpacity={0.7}
+        >
+          <View style={styles.settingsHeaderLeft}>
+            <View style={[styles.settingsIconWrap, { backgroundColor: 'rgba(168,85,247,0.15)' }]}>
+              <MapPin size={16} color="#A855F7" />
+            </View>
+            <View>
+              <Text style={styles.settingsTitle}>Locations</Text>
+              <Text style={styles.settingsSubtitle}>Suburbs used in transactions</Text>
+            </View>
+          </View>
+          {showLocationSettings ? (
+            <ChevronUp size={18} color={Colors.textMuted} />
+          ) : (
+            <ChevronDown size={18} color={Colors.textMuted} />
+          )}
+        </TouchableOpacity>
+
+        {showLocationSettings && (
+          <View style={styles.settingsBody}>
+            <Text style={styles.fieldHint}>
+              These suburbs will appear in merchant names, ATM locations, and card transaction descriptions.
+            </Text>
+            <View style={styles.fieldGroup}>
+              <View style={styles.fieldLabelRow}>
+                <MapPin size={13} color={Colors.textSecondary} />
+                <Text style={styles.fieldLabel}>Suburb 1 (Primary)</Text>
+              </View>
+              <TextInput
+                style={styles.dateInput}
+                value={suburb1}
+                onChangeText={setSuburb1}
+                placeholder="e.g. CABOOLTURE"
+                placeholderTextColor={Colors.textMuted}
+                autoCapitalize="characters"
+                autoCorrect={false}
+              />
+            </View>
+            <View style={styles.fieldGroup}>
+              <View style={styles.fieldLabelRow}>
+                <MapPin size={13} color={Colors.textSecondary} />
+                <Text style={styles.fieldLabel}>Suburb 2</Text>
+              </View>
+              <TextInput
+                style={styles.dateInput}
+                value={suburb2}
+                onChangeText={setSuburb2}
+                placeholder="e.g. MORAYFIELD"
+                placeholderTextColor={Colors.textMuted}
+                autoCapitalize="characters"
+                autoCorrect={false}
+              />
+            </View>
+            <View style={styles.fieldGroup}>
+              <View style={styles.fieldLabelRow}>
+                <MapPin size={13} color={Colors.textSecondary} />
+                <Text style={styles.fieldLabel}>Suburb 3</Text>
+              </View>
+              <TextInput
+                style={styles.dateInput}
+                value={suburb3}
+                onChangeText={setSuburb3}
+                placeholder="e.g. BURPENGARY"
+                placeholderTextColor={Colors.textMuted}
+                autoCapitalize="characters"
+                autoCorrect={false}
+              />
+            </View>
           </View>
         )}
       </View>

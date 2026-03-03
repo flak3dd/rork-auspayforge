@@ -65,6 +65,7 @@ export interface BankConfig {
   dailySpendMax: number;
   incomingTransferMin: number;
   incomingTransferMax: number;
+  suburbs: [string, string, string];
 }
 
 export interface LeaveOverride {
@@ -206,6 +207,7 @@ export const DEFAULT_CONFIG: AppConfig = {
     dailySpendMax: 154,
     incomingTransferMin: 50,
     incomingTransferMax: 560,
+    suburbs: ['CABOOLTURE', 'MORAYFIELD', 'BURPENGARY'],
   },
   leaveOverrides: [
     { takenHoursAnnual: 0, takenHoursPersonal: 0 },
