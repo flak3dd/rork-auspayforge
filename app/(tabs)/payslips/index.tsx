@@ -7,20 +7,22 @@ import {
   TouchableOpacity,
   Animated,
   Dimensions,
+  Platform,
 } from 'react-native';
-import { FileText, ChevronLeft, ChevronRight, Eye } from 'lucide-react-native';
+import { FileText, ChevronLeft, ChevronRight, Eye, HardHat, Briefcase } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import Colors from '@/constants/colors';
-import { usePayroll } from '@/providers/PayrollProvider';
+import { usePayroll, PayslipTemplateType } from '@/providers/PayrollProvider';
 import PayslipCard from '@/components/PayslipCard';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function PayslipsScreen() {
-  const { output } = usePayroll();
+  const { output, payslipTemplate, setPayslipTemplate, payslipHTMLs } = usePayroll();
   const router = useRouter();
   const [activeIndex, setActiveIndex] = useState<number>(0);
+  const [viewMode, setViewMode] = useState<'card' | 'html'>('card');
   const scrollRef = useRef<ScrollView>(null);
 
   const handlePrev = useCallback(() => {
@@ -46,6 +48,18 @@ export default function PayslipsScreen() {
     router.push('/preview');
   }, [router]);
 
+  const handleTemplateSwitch = useCallback((template: PayslipTemplateType) => {
+    if (template === payslipTemplate) return;
+    console.log('[Payslips] Switching template to:', template);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setPayslipTemplate(template);
+  }, [payslipTemplate, setPayslipTemplate]);
+
+  const toggleViewMode = useCallback(() => {
+    Haptics.selectionAsync();
+    setViewMode(prev => prev === 'card' ? 'html' : 'card');
+  }, []);
+
   const handleScroll = useCallback((e: { nativeEvent: { contentOffset: { x: number } } }) => {
     const offsetX = e.nativeEvent.contentOffset.x;
     const idx = Math.round(offsetX / (SCREEN_WIDTH - 32));
@@ -70,6 +84,25 @@ export default function PayslipsScreen() {
 
   return (
     <View style={styles.container}>
+      <View style={styles.templateBar}>
+        <TouchableOpacity
+          style={[styles.templateBtn, payslipTemplate === 'general' && styles.templateBtnActive]}
+          onPress={() => handleTemplateSwitch('general')}
+          activeOpacity={0.7}
+        >
+          <Briefcase size={14} color={payslipTemplate === 'general' ? Colors.accent : Colors.textMuted} />
+          <Text style={[styles.templateBtnText, payslipTemplate === 'general' && styles.templateBtnTextActive]}>General</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.templateBtn, payslipTemplate === 'construction' && styles.templateBtnActive]}
+          onPress={() => handleTemplateSwitch('construction')}
+          activeOpacity={0.7}
+        >
+          <HardHat size={14} color={payslipTemplate === 'construction' ? '#FF9500' : Colors.textMuted} />
+          <Text style={[styles.templateBtnText, payslipTemplate === 'construction' && styles.templateBtnTextActive, payslipTemplate === 'construction' && { color: '#FF9500' }]}>Construction</Text>
+        </TouchableOpacity>
+      </View>
+
       <View style={styles.navBar}>
         <TouchableOpacity
           onPress={handlePrev}
@@ -98,32 +131,61 @@ export default function PayslipsScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        ref={scrollRef}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onMomentumScrollEnd={handleScroll}
-        contentContainerStyle={styles.carousel}
-        decelerationRate="fast"
-        snapToInterval={SCREEN_WIDTH - 32}
-      >
-        {output.payslips.map((ps, i) => (
-          <View key={i} style={[styles.cardWrap, { width: SCREEN_WIDTH - 32 }]}>
-            <PayslipCard payslip={ps} index={i} />
+      {viewMode === 'card' ? (
+        <ScrollView
+          ref={scrollRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onMomentumScrollEnd={handleScroll}
+          contentContainerStyle={styles.carousel}
+          decelerationRate="fast"
+          snapToInterval={SCREEN_WIDTH - 32}
+        >
+          {output.payslips.map((ps, i) => (
+            <View key={i} style={[styles.cardWrap, { width: SCREEN_WIDTH - 32 }]}>
+              <PayslipCard payslip={ps} index={i} />
+            </View>
+          ))}
+        </ScrollView>
+      ) : (
+        <ScrollView style={styles.htmlScroll} contentContainerStyle={styles.htmlContent}>
+          <View style={styles.htmlPreviewBox}>
+            <Text style={styles.htmlPreviewLabel}>HTML Payslip Preview (Period {activeIndex + 1})</Text>
+            <Text style={styles.htmlPreviewNote}>
+              {payslipTemplate === 'construction' ? 'Construction Industry' : 'General'} template applied.
+              Export to view the full formatted document.
+            </Text>
+            {payslipHTMLs[activeIndex] ? (
+              <View style={styles.htmlSnippet}>
+                <Text style={styles.htmlSnippetText} numberOfLines={20}>
+                  {payslipHTMLs[activeIndex].replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').slice(0, 800)}
+                </Text>
+              </View>
+            ) : null}
           </View>
-        ))}
-      </ScrollView>
+        </ScrollView>
+      )}
 
       <View style={styles.bottomBar}>
-        <TouchableOpacity
-          style={styles.statementButton}
-          onPress={handleViewStatement}
-          activeOpacity={0.8}
-        >
-          <Eye size={18} color={Colors.background} />
-          <Text style={styles.statementButtonText}>View Bank Statement</Text>
-        </TouchableOpacity>
+        <View style={styles.bottomRow}>
+          <TouchableOpacity
+            style={styles.viewToggle}
+            onPress={toggleViewMode}
+            activeOpacity={0.7}
+          >
+            <FileText size={16} color={Colors.accent} />
+            <Text style={styles.viewToggleText}>{viewMode === 'card' ? 'Preview HTML' : 'Card View'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.statementButton}
+            onPress={handleViewStatement}
+            activeOpacity={0.8}
+          >
+            <Eye size={18} color={Colors.background} />
+            <Text style={styles.statementButtonText}>View Statement</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -164,12 +226,44 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
+  templateBar: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 4,
+    gap: 8,
+  },
+  templateBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 9,
+    borderRadius: 10,
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  templateBtnActive: {
+    borderColor: Colors.accent,
+    backgroundColor: Colors.accent + '15',
+  },
+  templateBtnText: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    color: Colors.textMuted,
+  },
+  templateBtnTextActive: {
+    color: Colors.accent,
+    fontWeight: '700' as const,
+  },
   navBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 10,
   },
   navButton: {
     width: 36,
@@ -214,15 +308,76 @@ const styles = StyleSheet.create({
   cardWrap: {
     paddingRight: 0,
   },
+  htmlScroll: {
+    flex: 1,
+  },
+  htmlContent: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  htmlPreviewBox: {
+    backgroundColor: Colors.card,
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  htmlPreviewLabel: {
+    fontSize: 15,
+    fontWeight: '700' as const,
+    color: Colors.text,
+    marginBottom: 6,
+  },
+  htmlPreviewNote: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    lineHeight: 19,
+    marginBottom: 12,
+  },
+  htmlSnippet: {
+    backgroundColor: Colors.cardElevated,
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  htmlSnippetText: {
+    fontSize: 11,
+    color: Colors.textMuted,
+    lineHeight: 16,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
   bottomBar: {
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 10,
     paddingBottom: 4,
   },
+  bottomRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  viewToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.accent + '50',
+    backgroundColor: Colors.card,
+  },
+  viewToggleText: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    color: Colors.accent,
+  },
   statementButton: {
+    flex: 1,
     backgroundColor: Colors.accent,
     borderRadius: 14,
-    paddingVertical: 14,
+    paddingVertical: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

@@ -10,16 +10,48 @@ import {
 import { generatePayslips } from '@/utils/payslip';
 import { generateBankStatement } from '@/utils/bankStatement';
 import { isConfigValid } from '@/utils/validation';
+import { generateGeneralPayslipHTML } from '@/lib/templates/generalPayslipTemplate';
+import { generateConstructionPayslipHTML } from '@/lib/templates/constructionPayslipTemplate';
+
+export type PayslipTemplateType = 'general' | 'construction';
+
+function generatePayslipHTML(payslip: Payslip, index: number, templateType: PayslipTemplateType): string {
+  console.log('[PayrollProvider] Generating HTML with template:', templateType, 'for period', index + 1);
+  if (templateType === 'construction') {
+    return generateConstructionPayslipHTML(payslip, index);
+  }
+  return generateGeneralPayslipHTML(payslip, index);
+}
 
 export const [PayrollProvider, usePayroll] = createContextHook(() => {
   const [config, setConfig] = useState<AppConfig>(DEFAULT_CONFIG);
   const [output, setOutput] = useState<GeneratedOutput | null>(null);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
+  const [payslipTemplate, setPayslipTemplate] = useState<PayslipTemplateType>('general');
+  const [payslipHTMLs, setPayslipHTMLs] = useState<string[]>([]);
 
   const validation = useMemo(() => isConfigValid(config), [config]);
 
   const updateConfig = useCallback(<K extends keyof AppConfig>(key: K, value: AppConfig[K]) => {
     setConfig(prev => ({ ...prev, [key]: value }));
+  }, []);
+
+  const detectTemplate = useCallback((cfg: AppConfig): PayslipTemplateType => {
+    const dept = cfg.employee.department.toLowerCase();
+    const cls = cfg.employee.classification.toLowerCase();
+    const employer = cfg.employer.name.toLowerCase();
+    if (
+      dept.includes('construction') ||
+      dept.includes('site') ||
+      dept.includes('trade') ||
+      cls.includes('trade') ||
+      cls.includes('construction') ||
+      employer.includes('construct') ||
+      employer.includes('build')
+    ) {
+      return 'construction';
+    }
+    return 'general';
   }, []);
 
   const generate = useCallback(() => {
@@ -31,6 +63,14 @@ export const [PayrollProvider, usePayroll] = createContextHook(() => {
 
       const bankStatement: BankStatement = generateBankStatement(config, payslips);
       console.log('[PayrollProvider] Generated bank statement with', bankStatement.transactions.length, 'transactions');
+
+      const detected = detectTemplate(config);
+      setPayslipTemplate(detected);
+      console.log('[PayrollProvider] Auto-detected payslip template:', detected);
+
+      const htmls = payslips.map((ps, i) => generatePayslipHTML(ps, i, detected));
+      setPayslipHTMLs(htmls);
+      console.log('[PayrollProvider] Generated', htmls.length, 'payslip HTML documents');
 
       const result: GeneratedOutput = {
         payslips,
@@ -45,11 +85,20 @@ export const [PayrollProvider, usePayroll] = createContextHook(() => {
     } finally {
       setIsGenerating(false);
     }
-  }, [config]);
+  }, [config, detectTemplate]);
+
+  const regenerateHTMLs = useCallback((template: PayslipTemplateType) => {
+    if (!output) return;
+    console.log('[PayrollProvider] Regenerating HTMLs with template:', template);
+    setPayslipTemplate(template);
+    const htmls = output.payslips.map((ps, i) => generatePayslipHTML(ps, i, template));
+    setPayslipHTMLs(htmls);
+  }, [output]);
 
   const resetConfig = useCallback(() => {
     setConfig(DEFAULT_CONFIG);
     setOutput(null);
+    setPayslipHTMLs([]);
   }, []);
 
   return {
@@ -61,5 +110,8 @@ export const [PayrollProvider, usePayroll] = createContextHook(() => {
     validation,
     generate,
     resetConfig,
+    payslipTemplate,
+    setPayslipTemplate: regenerateHTMLs,
+    payslipHTMLs,
   };
 });
