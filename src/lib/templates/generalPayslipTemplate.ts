@@ -131,13 +131,15 @@ export function generateGeneralPayslipHTML(payslip: Payslip, index: number): str
 
     <div class="employee-info">
         ${payslip.employee.name}<br>
-        ${payslip.employee.address.split('\n').join('<br>')}
+        ${payslip.employee.address.split('\n').join('<br>')}<br>
+        Employee No: ${payslip.employee.id}<br>
+        Department: ${payslip.employee.department} — ${payslip.employee.classification}
     </div>
 
     <div style="margin: 20px 0;">
         EMPLOYMENT DETAILS<br>
         Pay Frequency: ${payslip.period.endDate ? (Math.round((new Date(payslip.period.endDate).getTime() - new Date(payslip.period.startDate).getTime()) / 86400000) <= 7 ? 'Weekly' : Math.round((new Date(payslip.period.endDate).getTime() - new Date(payslip.period.startDate).getTime()) / 86400000) <= 14 ? 'Fortnightly' : 'Monthly') : 'Fortnightly'}<br>
-        Annual Salary: $${fmt(payslip.annualRate)}
+        Annual Salary: ${fmt(payslip.annualRate)}
     </div>
 
     <div class="pay-period">
@@ -188,10 +190,15 @@ export function generateGeneralPayslipHTML(payslip: Payslip, index: number): str
                 <td colspan="5">SUPERANNUATION</td>
             </tr>
             <tr>
-                <td>Superannuation Guarantee (12%)</td>
+                <td>Superannuation Guarantee (11.5%)</td>
                 <td colspan="2"></td>
                 <td class="right-align">${fmt(payslip.superAmount)}</td>
                 <td class="right-align">${fmt(payslip.superYTD)}</td>
+            </tr>
+            <tr>
+                <td colspan="3" style="font-size:10px;color:#666;">Fund: ${payslip.superConfig.fundName} | Member: ${payslip.superConfig.memberID}</td>
+                <td></td>
+                <td></td>
             </tr>
             <tr class="total-row">
                 <td colspan="3" class="right-align">TOTAL</td>
@@ -223,7 +230,7 @@ export function generateGeneralPayslipHTML(payslip: Payslip, index: number): str
     </div>
 
     <div style="margin-top: 30px; font-size: 10px; color: #999; text-align: center;">
-        Generated ${new Date().toLocaleDateString('en-AU')} &mdash; Period ${index + 1}
+        This document is confidential and intended for the named recipient only.
     </div>
 
 </body>

@@ -175,7 +175,7 @@ export function generateBankStatement(config: AppConfig, payslips: Payslip[]): B
       balance = Math.round((balance + amount) * 100) / 100;
       txs.push({
         date: new Date(current),
-        description: `Direct Credit from ${config.employer.name} Salary`,
+        description: `Direct Credit ${config.employer.name.toUpperCase()} Salary/Wages`,
         credit: amount,
         debit: 0,
         balance,
@@ -244,7 +244,7 @@ export function generateBankStatement(config: AppConfig, payslips: Payslip[]): B
     }
 
     if (bc.includeATM && rand() < 0.19 * densityMultiplier * (debitBias * 1.6 + 0.2)) {
-      const amounts = [80, 140, 200, 250, 350];
+      const amounts = [20, 40, 50, 60, 80, 100, 150, 200, 250, 300];
       const amount = pick(amounts, rand);
       const location = pick(ATM_LOCATIONS, rand);
       balance = Math.round((balance - amount) * 100) / 100;
@@ -292,29 +292,100 @@ export function generateBankStatement(config: AppConfig, payslips: Payslip[]): B
       });
     }
 
+    if (current.getDate() === 1) {
+      const totalCreditsThisMonth = txs
+        .filter(t => t.date.getMonth() === current.getMonth() && t.credit > 0)
+        .reduce((s, t) => s + t.credit, 0);
+      if (totalCreditsThisMonth >= 2000) {
+        txs.push({
+          date: new Date(current),
+          description: 'Monthly Account Fee Waiver',
+          credit: 0,
+          debit: 0,
+          balance,
+        });
+      } else {
+        balance = Math.round((balance - 4) * 100) / 100;
+        txs.push({
+          date: new Date(current),
+          description: 'Monthly Account Fee',
+          credit: 0,
+          debit: 4,
+          balance,
+        });
+      }
+    }
+
     current.setDate(current.getDate() + 1);
   }
 
-  const diff = Math.round((config.bankConfig.closingBalance - balance) * 100) / 100;
-  if (Math.abs(diff) > 0.01) {
-    if (diff > 0) {
-      balance = config.bankConfig.closingBalance;
-      txs.push({
-        date: new Date(spanEnd),
-        description: 'Fast Transfer From MR NICKOLAS ADAM HAEV\nto PayID Phone\nCREDIT TO ACCOUNT',
-        credit: diff,
-        debit: 0,
-        balance,
-      });
-    } else {
-      balance = config.bankConfig.closingBalance;
-      txs.push({
-        date: new Date(spanEnd),
-        description: 'Fast Transfer To MR ADJUST HAEV\nPayID Phone from CommBank App\nDEBIT ADJUSTMENT',
-        credit: 0,
-        debit: Math.abs(diff),
-        balance,
-      });
+  const openingTx = txs.shift()!;
+  const dayGroups = new Map<string, BankTransaction[]>();
+  for (const tx of txs) {
+    const key = tx.date.toISOString().split('T')[0];
+    if (!dayGroups.has(key)) dayGroups.set(key, []);
+    dayGroups.get(key)!.push(tx);
+  }
+  const shuffledTxs: BankTransaction[] = [openingTx];
+  for (const [, dayTxs] of dayGroups) {
+    for (let i = dayTxs.length - 1; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      [dayTxs[i], dayTxs[j]] = [dayTxs[j], dayTxs[i]];
+    }
+    shuffledTxs.push(...dayTxs);
+  }
+  txs.length = 0;
+  txs.push(...shuffledTxs);
+
+  let recalcBal = config.bankConfig.openingBalance;
+  for (const tx of txs) {
+    if (tx.description === 'OPENING BALANCE') {
+      tx.balance = recalcBal;
+      continue;
+    }
+    recalcBal = Math.round((recalcBal + tx.credit - tx.debit) * 100) / 100;
+    tx.balance = recalcBal;
+  }
+  balance = recalcBal;
+
+  const targetClosing = config.bankConfig.closingBalance;
+  const currentDiff = Math.round((targetClosing - balance) * 100) / 100;
+  if (Math.abs(currentDiff) > 0.01) {
+    const adjustableTxs = txs.filter(t =>
+      t.description !== 'OPENING BALANCE' &&
+      (t.debit > 0 || t.credit > 0)
+    );
+    if (adjustableTxs.length > 0) {
+      const perTxAdjust = currentDiff / adjustableTxs.length;
+      let remaining = currentDiff;
+      for (let i = 0; i < adjustableTxs.length; i++) {
+        const tx = adjustableTxs[i];
+        let adj: number;
+        if (i === adjustableTxs.length - 1) {
+          adj = remaining;
+        } else {
+          adj = Math.round((perTxAdjust + (rand() - 0.5) * Math.abs(perTxAdjust) * 0.4) * 100) / 100;
+          adj = Math.min(adj, remaining);
+        }
+        if (tx.credit > 0) {
+          tx.credit = Math.round((tx.credit + adj) * 100) / 100;
+          if (tx.credit < 0.01) tx.credit = Math.round((0.5 + rand() * 2) * 100) / 100;
+        } else if (tx.debit > 0) {
+          tx.debit = Math.round((tx.debit - adj) * 100) / 100;
+          if (tx.debit < 0.01) tx.debit = Math.round((0.5 + rand() * 2) * 100) / 100;
+        }
+        remaining = Math.round((remaining - adj) * 100) / 100;
+      }
+      let runBal = config.bankConfig.openingBalance;
+      for (const tx of txs) {
+        if (tx.description === 'OPENING BALANCE') {
+          tx.balance = runBal;
+          continue;
+        }
+        runBal = Math.round((runBal + tx.credit - tx.debit) * 100) / 100;
+        tx.balance = runBal;
+      }
+      balance = runBal;
     }
   }
 
@@ -323,7 +394,7 @@ export function generateBankStatement(config: AppConfig, payslips: Payslip[]): B
     description: 'CLOSING BALANCE',
     credit: 0,
     debit: 0,
-    balance: config.bankConfig.closingBalance,
+    balance: Math.round(balance * 100) / 100,
   });
 
   const TX_PER_PAGE = 15;

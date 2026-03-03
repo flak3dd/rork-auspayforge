@@ -185,6 +185,7 @@ export function generateAdminFortnightlyPayslipHTML(payslip: Payslip, index: num
             <label>Employee</label>
             <p><strong>${payslip.employee.name}</strong></p>
             <p>${employeeLines.join('<br>')}</p>
+            <p style="margin-top:2px;font-size:10px;color:#666;">ID: ${payslip.employee.id} | ${payslip.employee.department} — ${payslip.employee.classification}</p>
         </div>
         <div class="info-block">
             <label>Pay Period</label>
@@ -239,7 +240,7 @@ export function generateAdminFortnightlyPayslipHTML(payslip: Payslip, index: num
     <table>
         <tbody>
             <tr>
-                <td>Superannuation Guarantee (12%)</td>
+                <td>Superannuation Guarantee (11.5%)<br><span style="font-size:9px;color:#888;">Fund: ${payslip.superConfig.fundName} | Member: ${payslip.superConfig.memberID}</span></td>
                 <td class="right">$${fmt(payslip.superAmount)}</td>
             </tr>
         </tbody>
@@ -282,7 +283,7 @@ export function generateAdminFortnightlyPayslipHTML(payslip: Payslip, index: num
     <div class="footer">
         <span>${payslip.employer.name} — Confidential</span>
         <span>Page 1 of 1</span>
-        <span>Generated ${new Date().toLocaleDateString('en-AU')}</span>
+        <span>This document is confidential</span>
     </div>
 
 </body>

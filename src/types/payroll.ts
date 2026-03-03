@@ -128,6 +128,7 @@ export interface Payslip {
   netPay: number;
   superAmount: number;
   superYTD: number;
+  superConfig: SuperConfig;
   leave: PayslipLeave[];
   bankAccount: string;
   paymentRef: string;

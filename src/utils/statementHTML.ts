@@ -15,10 +15,12 @@ function fmtDate(d: Date): string {
 
 function txRow(tx: BankTransaction): string {
   const desc = tx.description.replace(/\n/g, '<br>');
-  const debit = tx.debit > 0 ? fmtAmount(tx.debit) : '';
-  const credit = tx.credit > 0 ? fmtAmount(tx.credit) : '';
-  const bal = `$${fmtAmount(tx.balance)} CR`;
-  return `<tr><td>${fmtDate(tx.date)}</td><td style="line-height:1.28">${desc}</td><td>${debit}</td><td>${credit}</td><td>${bal}</td></tr>`;
+  const isBalanceRow = desc === 'OPENING BALANCE' || desc === 'CLOSING BALANCE';
+  const debit = isBalanceRow ? '' : (tx.debit > 0 ? fmtAmount(tx.debit) : '');
+  const credit = isBalanceRow ? '' : (tx.credit > 0 ? fmtAmount(tx.credit) : '');
+  const bal = `${fmtAmount(tx.balance)} CR`;
+  const style = isBalanceRow ? ' style="font-weight:bold;"' : '';
+  return `<tr${style}><td>${fmtDate(tx.date)}</td><td style="line-height:1.28">${desc}</td><td>${debit}</td><td>${credit}</td><td>${bal}</td></tr>`;
 }
 
 export function generateStatementHTML(statement: BankStatement, config: AppConfig, assets?: StatementAssets): string {

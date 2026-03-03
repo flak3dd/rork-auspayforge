@@ -242,6 +242,7 @@ export function generateExecutiveMonthlyPayslipHTML(payslip: Payslip, index: num
                 <div class="field-label">Employee</div>
                 <div class="field-value"><strong>${payslip.employee.name}</strong></div>
                 <div class="field-value">${employeeLines.join('<br>')}</div>
+                <div class="field-value" style="margin-top:4px;font-size:9px;color:#888;">ID: ${payslip.employee.id} | ${payslip.employee.department}</div>
             </div>
             <div>
                 <div class="field-label">Pay Period</div>
@@ -318,7 +319,7 @@ export function generateExecutiveMonthlyPayslipHTML(payslip: Payslip, index: num
         <table>
             <tbody>
                 <tr>
-                    <td>Superannuation Guarantee (12%)</td>
+                    <td>Superannuation Guarantee (11.5%)<br><span style="font-size:8px;color:#999;">Fund: ${payslip.superConfig.fundName} | Member: ${payslip.superConfig.memberID}</span></td>
                     <td class="r">$${fmt(payslip.superAmount)}</td>
                     <td class="r muted">$${fmt(payslip.superYTD)}</td>
                 </tr>
@@ -362,7 +363,7 @@ export function generateExecutiveMonthlyPayslipHTML(payslip: Payslip, index: num
         <div class="footer-bar">
             <span>${payslip.employer.name} — Private & Confidential</span>
             <span>Page 1 of 1</span>
-            <span>Generated ${new Date().toLocaleDateString('en-AU')}</span>
+            <span>Private & Confidential</span>
         </div>
 
     </div>

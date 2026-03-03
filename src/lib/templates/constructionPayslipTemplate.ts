@@ -153,7 +153,8 @@ export function generateConstructionPayslipHTML(payslip: Payslip, index: number)
         ${payslip.employee.name}<br>
         ${employeeLines[0] || ''}<br>
         ${employeeLines[1] || ''}<br>
-        Australia
+        Australia<br>
+        Employee No: ${payslip.employee.id} | ${payslip.employee.department} — ${payslip.employee.classification}
     </div>
 
     <div class="pay-dates">
@@ -186,7 +187,7 @@ export function generateConstructionPayslipHTML(payslip: Payslip, index: number)
 
     <div class="section-title">Other Benefits</div>
     <div class="payment-item">
-        <span class="item-description">Superannuation Guarantee (12%)</span>
+        <span class="item-description">Superannuation Guarantee (11.5%)<br><span style="font-size:10px;color:#666;">Fund: ${payslip.superConfig.fundName} | Member: ${payslip.superConfig.memberID}</span></span>
         <span class="item-amount">$${fmt(payslip.superAmount)}</span>
     </div>
 
@@ -211,7 +212,7 @@ export function generateConstructionPayslipHTML(payslip: Payslip, index: number)
 
     <div class="footer">
         <span>Page 1 of 1 | Period ${index + 1}</span>
-        <span>Generated on ${new Date().toLocaleDateString('en-AU')}</span>
+        <span>This document is confidential and intended for the named recipient only.</span>
     </div>
 
 </body>

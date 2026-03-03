@@ -11,7 +11,7 @@ export function calculatePAYG(annualIncome: number): number {
   for (const bracket of brackets) {
     if (annualIncome >= bracket.min) {
       if (annualIncome <= bracket.max) {
-        tax = bracket.base + (annualIncome - bracket.min + 1) * bracket.rate;
+        tax = bracket.base + (annualIncome - bracket.min) * bracket.rate;
         break;
       }
     }

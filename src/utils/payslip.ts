@@ -70,11 +70,14 @@ export function generatePayslips(config: AppConfig): Payslip[] {
   const ytdDeductions: Record<string, number> = {};
   let annualLeaveBalance = 0;
   let personalLeaveBalance = 0;
+  let longServiceLeaveBalance = 0;
   let ytdAnnualAccrued = 0;
   let ytdPersonalAccrued = 0;
+  let ytdLSLAccrued = 0;
 
   const annualLeavePerPeriod = 152 / ppy;
   const personalLeavePerPeriod = 76 / ppy;
+  const lslPerPeriod = Math.round((6.0769 / ppy) * 100) / 100;
 
   const annualRate = config.payConfig.basis === 'salary'
     ? config.payConfig.annualSalary
@@ -172,7 +175,7 @@ export function generatePayslips(config: AppConfig): Payslip[] {
 
     const net = Math.round((gross - totalDeductions) * 100) / 100;
 
-    const superAmount = Math.round(ote * 0.12 * 100) / 100;
+    const superAmount = Math.round(ote * 0.115 * 100) / 100;
     ytdSuper += superAmount;
 
     ytdGross += gross;
@@ -182,8 +185,10 @@ export function generatePayslips(config: AppConfig): Payslip[] {
 
     annualLeaveBalance += annualLeavePerPeriod - leaveOverride.takenHoursAnnual;
     personalLeaveBalance += personalLeavePerPeriod - leaveOverride.takenHoursPersonal;
+    longServiceLeaveBalance += lslPerPeriod;
     ytdAnnualAccrued += annualLeavePerPeriod;
     ytdPersonalAccrued += personalLeavePerPeriod;
+    ytdLSLAccrued += lslPerPeriod;
 
     const leave: PayslipLeave[] = [
       {
@@ -200,10 +205,18 @@ export function generatePayslips(config: AppConfig): Payslip[] {
         balance: Math.round(personalLeaveBalance * 100) / 100,
         ytdAccrued: Math.round(ytdPersonalAccrued * 100) / 100,
       },
+      {
+        type: 'Long Service Leave',
+        accruedThisPeriod: lslPerPeriod,
+        takenThisPeriod: 0,
+        balance: Math.round(longServiceLeaveBalance * 100) / 100,
+        ytdAccrued: Math.round(ytdLSLAccrued * 100) / 100,
+      },
     ];
 
     const bsbFormatted = config.bankConfig.bsb.replace(/(\d{3})(\d{3})/, '$1-$2');
-    const paymentRef = `PAY${String(idx + 1).padStart(3, '0')}-${Date.now().toString(36).toUpperCase().slice(-6)}`;
+    const payDateStr = new Date(period.paymentDate).toLocaleDateString('en-AU', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '');
+    const paymentRef = `${payDateStr}-${String(idx + 1).padStart(3, '0')}`;
 
     return {
       period,
@@ -217,6 +230,7 @@ export function generatePayslips(config: AppConfig): Payslip[] {
       netPay: net,
       superAmount,
       superYTD: Math.round(ytdSuper * 100) / 100,
+      superConfig: config.superConfig,
       leave,
       bankAccount: `${bsbFormatted} ${config.bankConfig.accountNumber}`,
       paymentRef,
