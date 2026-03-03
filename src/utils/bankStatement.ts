@@ -109,6 +109,11 @@ export function generateBankStatement(config: AppConfig, payslips: Payslip[]): B
   const densityMultiplier = bc.transactionDensity === 'low' ? 0.4
     : bc.transactionDensity === 'high' ? 1.4 : 1.0;
 
+  const ratio = bc.debitCreditRatio ?? 0.5;
+  const creditBias = ratio;
+  const debitBias = 1 - ratio;
+  console.log('[BankStatement] Debit/Credit ratio:', ratio, '| creditBias:', creditBias.toFixed(2), '| debitBias:', debitBias.toFixed(2));
+
   const hasCustomDates = bc.statementStartDate && bc.statementLength;
   const hasPayslips = payslips.length > 0;
   const spanStart = hasCustomDates
@@ -177,8 +182,8 @@ export function generateBankStatement(config: AppConfig, payslips: Payslip[]): B
       });
     }
 
-    if (bc.includeTransfers && rand() < 0.72 * densityMultiplier) {
-      const count = Math.floor(rand() * 4) + 2;
+    if (bc.includeTransfers && rand() < 0.72 * densityMultiplier * (creditBias * 1.6 + 0.2)) {
+      const count = Math.floor(rand() * Math.max(1, Math.round(4 * (creditBias * 1.4 + 0.3)))) + 1;
       for (let j = 0; j < count; j++) {
         const range = transferMax - transferMin;
         const amount = Math.round((rand() * range + transferMin) * 100) / 100;
@@ -195,7 +200,7 @@ export function generateBankStatement(config: AppConfig, payslips: Payslip[]): B
       }
     }
 
-    if (bc.includeTransfers && rand() < 0.3 * densityMultiplier) {
+    if (bc.includeTransfers && rand() < 0.3 * densityMultiplier * (creditBias * 1.6 + 0.2)) {
       const amount = Math.round((rand() * 800 + 200) * 100) / 100;
       const acc = pick(TRANSFER_ACCOUNTS, rand);
       balance = Math.round((balance + amount) * 100) / 100;
@@ -208,8 +213,8 @@ export function generateBankStatement(config: AppConfig, payslips: Payslip[]): B
       });
     }
 
-    if (rand() < 0.76 * densityMultiplier) {
-      const count = Math.floor(rand() * 3) + 1;
+    if (rand() < 0.76 * densityMultiplier * (debitBias * 1.6 + 0.2)) {
+      const count = Math.floor(rand() * Math.max(1, Math.round(3 * (debitBias * 1.4 + 0.3)))) + 1;
       for (let j = 0; j < count; j++) {
         const category = pick(MERCHANT_CATEGORIES, rand);
         const merchant = pick(MERCHANTS[category], rand);
@@ -238,7 +243,7 @@ export function generateBankStatement(config: AppConfig, payslips: Payslip[]): B
       }
     }
 
-    if (bc.includeATM && rand() < 0.19 * densityMultiplier) {
+    if (bc.includeATM && rand() < 0.19 * densityMultiplier * (debitBias * 1.6 + 0.2)) {
       const amounts = [80, 140, 200, 250, 350];
       const amount = pick(amounts, rand);
       const location = pick(ATM_LOCATIONS, rand);
@@ -252,7 +257,7 @@ export function generateBankStatement(config: AppConfig, payslips: Payslip[]): B
       });
     }
 
-    if (bc.includeTransfers && rand() < 0.3 * densityMultiplier) {
+    if (bc.includeTransfers && rand() < 0.3 * densityMultiplier * (debitBias * 1.6 + 0.2)) {
       const amount = Math.round((rand() * 250 + 50) * 100) / 100;
       const recipient = pick(RECIPIENTS, rand);
       const memo = pick(INCOMING_MEMOS, rand);
@@ -266,7 +271,7 @@ export function generateBankStatement(config: AppConfig, payslips: Payslip[]): B
       });
     }
 
-    if (bc.includeCardlessCash && rand() < 0.15 * densityMultiplier) {
+    if (bc.includeCardlessCash && rand() < 0.15 * densityMultiplier * (debitBias * 1.2 + 0.4)) {
       const amount = Math.round((rand() * 400 + 100) * 100) / 100;
       const memo = pick(CARDLESS_MEMOS, rand);
       balance = Math.round((balance - amount) * 100) / 100;

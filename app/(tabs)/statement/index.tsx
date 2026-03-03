@@ -123,6 +123,7 @@ export default function StatementScreen() {
   const [suburb1, setSuburb1] = useState<string>(config.bankConfig.suburbs[0]);
   const [suburb2, setSuburb2] = useState<string>(config.bankConfig.suburbs[1]);
   const [suburb3, setSuburb3] = useState<string>(config.bankConfig.suburbs[2]);
+  const [debitCreditRatio, setDebitCreditRatio] = useState<number>(config.bankConfig.debitCreditRatio);
   const [showLocationSettings, setShowLocationSettings] = useState<boolean>(false);
 
   const [isRegenerating, setIsRegenerating] = useState<boolean>(false);
@@ -177,6 +178,7 @@ export default function StatementScreen() {
         dailySpendMax: parseFloat(dailySpendMax) || 154,
         incomingTransferMin: parseFloat(incomingTransferMin) || 50,
         incomingTransferMax: parseFloat(incomingTransferMax) || 560,
+        debitCreditRatio,
         suburbs: [suburb1.trim() || 'CABOOLTURE', suburb2.trim() || 'MORAYFIELD', suburb3.trim() || 'BURPENGARY'],
       });
       console.log('[Statement] Regenerated with all custom options');
@@ -187,7 +189,7 @@ export default function StatementScreen() {
     startDateInput, selectedLength, openingBalance, closingBalance,
     density, includePension, includeATM, includeCardlessCash, includeTransfers,
     dailySpendMin, dailySpendMax, incomingTransferMin, incomingTransferMax,
-    suburb1, suburb2, suburb3, regenerateStatement,
+    debitCreditRatio, suburb1, suburb2, suburb3, regenerateStatement,
   ]);
 
   const totalCredits = statement?.transactions.reduce((sum, tx) => sum + tx.credit, 0) ?? 0;
@@ -521,6 +523,123 @@ export default function StatementScreen() {
                     </Text>
                   </TouchableOpacity>
                 ))}
+              </View>
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.fieldGroup}>
+              <View style={styles.fieldLabelRow}>
+                <ArrowUpDown size={13} color={Colors.textSecondary} />
+                <Text style={styles.fieldLabel}>Debit / Credit Ratio</Text>
+              </View>
+              <View style={styles.ratioSliderContainer}>
+                <View style={styles.ratioLabelsRow}>
+                  <Text style={[styles.ratioEndLabel, debitCreditRatio < 0.4 && styles.ratioEndLabelActive]}>
+                    More Debits
+                  </Text>
+                  <Text style={[styles.ratioEndLabel, debitCreditRatio > 0.6 && styles.ratioCreditLabelActive]}>
+                    More Credits
+                  </Text>
+                </View>
+                <View style={styles.ratioTrack}>
+                  <View
+                    style={[
+                      styles.ratioFillLeft,
+                      { width: `${(1 - debitCreditRatio) * 100}%` },
+                    ]}
+                  />
+                  <View
+                    style={[
+                      styles.ratioFillRight,
+                      { width: `${debitCreditRatio * 100}%` },
+                    ]}
+                  />
+                </View>
+                {Platform.OS === 'web' ? (
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={Math.round(debitCreditRatio * 100)}
+                    onChange={(e: any) => {
+                      const val = parseInt(e.target.value, 10) / 100;
+                      setDebitCreditRatio(val);
+                    }}
+                    style={{
+                      width: '100%',
+                      height: 40,
+                      opacity: 0,
+                      position: 'absolute' as const,
+                      cursor: 'pointer',
+                      zIndex: 10,
+                      margin: 0,
+                      top: 20,
+                    }}
+                  />
+                ) : null}
+                {Platform.OS !== 'web' ? (
+                  <View
+                    style={styles.ratioSliderTouchArea}
+                    onStartShouldSetResponder={() => true}
+                    onMoveShouldSetResponder={() => true}
+                    onResponderGrant={(e) => {
+                      const touch = e.nativeEvent;
+                      const layout = (e.target as any);
+                      if (layout?.measure) {
+                        layout.measure((_x: number, _y: number, width: number) => {
+                          const val = Math.max(0, Math.min(1, touch.locationX / width));
+                          setDebitCreditRatio(Math.round(val * 20) / 20);
+                          Haptics.selectionAsync();
+                        });
+                      } else {
+                        setDebitCreditRatio(Math.round(Math.max(0, Math.min(1, touch.locationX / 300)) * 20) / 20);
+                        Haptics.selectionAsync();
+                      }
+                    }}
+                    onResponderMove={(e) => {
+                      const touch = e.nativeEvent;
+                      const layout = (e.target as any);
+                      if (layout?.measure) {
+                        layout.measure((_x: number, _y: number, width: number) => {
+                          const val = Math.max(0, Math.min(1, touch.locationX / width));
+                          setDebitCreditRatio(Math.round(val * 20) / 20);
+                        });
+                      } else {
+                        setDebitCreditRatio(Math.round(Math.max(0, Math.min(1, touch.locationX / 300)) * 20) / 20);
+                      }
+                    }}
+                  />
+                ) : null}
+                <View
+                  style={[
+                    styles.ratioThumb,
+                    { left: `${debitCreditRatio * 100}%` },
+                  ]}
+                  pointerEvents="none"
+                />
+                <View style={styles.ratioMarkers}>
+                  <View style={styles.ratioMarker} />
+                  <View style={styles.ratioMarker} />
+                  <View style={[styles.ratioMarker, styles.ratioMarkerCenter]} />
+                  <View style={styles.ratioMarker} />
+                  <View style={styles.ratioMarker} />
+                </View>
+              </View>
+              <View style={styles.ratioValueRow}>
+                <TrendingDown size={12} color={Colors.error} />
+                <Text style={styles.ratioValueText}>
+                  {debitCreditRatio < 0.35
+                    ? 'Heavy Debits'
+                    : debitCreditRatio < 0.45
+                    ? 'More Debits'
+                    : debitCreditRatio <= 0.55
+                    ? 'Balanced'
+                    : debitCreditRatio <= 0.65
+                    ? 'More Credits'
+                    : 'Heavy Credits'}
+                </Text>
+                <TrendingUp size={12} color={Colors.success} />
               </View>
             </View>
 
@@ -1378,6 +1497,96 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: Colors.border,
     marginVertical: 2,
+  },
+  ratioSliderContainer: {
+    marginTop: 4,
+    position: 'relative' as const,
+  },
+  ratioLabelsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  ratioEndLabel: {
+    fontSize: 11,
+    fontWeight: '600' as const,
+    color: Colors.textMuted,
+  },
+  ratioEndLabelActive: {
+    color: Colors.error,
+  },
+  ratioCreditLabelActive: {
+    color: Colors.success,
+  },
+  ratioTrack: {
+    height: 6,
+    borderRadius: 3,
+    flexDirection: 'row',
+    overflow: 'hidden',
+    backgroundColor: Colors.cardElevated,
+  },
+  ratioFillLeft: {
+    height: 6,
+    backgroundColor: Colors.error + '60',
+  },
+  ratioFillRight: {
+    height: 6,
+    backgroundColor: Colors.success + '60',
+  },
+  ratioSliderTouchArea: {
+    position: 'absolute' as const,
+    top: -14,
+    left: 0,
+    right: 0,
+    height: 40,
+    zIndex: 10,
+  },
+  ratioThumb: {
+    position: 'absolute' as const,
+    top: -5,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    marginLeft: -8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+    borderWidth: 2,
+    borderColor: Colors.accent,
+  },
+  ratioMarkers: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 2,
+    marginTop: 8,
+  },
+  ratioMarker: {
+    width: 1,
+    height: 6,
+    backgroundColor: Colors.border,
+  },
+  ratioMarkerCenter: {
+    width: 2,
+    backgroundColor: Colors.textMuted,
+  },
+  ratioValueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 10,
+    backgroundColor: Colors.cardElevated,
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  ratioValueText: {
+    fontSize: 12,
+    fontWeight: '700' as const,
+    color: Colors.text,
   },
   toggleRow: {
     flexDirection: 'row',

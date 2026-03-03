@@ -65,6 +65,7 @@ export interface BankConfig {
   dailySpendMax: number;
   incomingTransferMin: number;
   incomingTransferMax: number;
+  debitCreditRatio: number;
   suburbs: [string, string, string];
 }
 
@@ -207,6 +208,7 @@ export const DEFAULT_CONFIG: AppConfig = {
     dailySpendMax: 154,
     incomingTransferMin: 50,
     incomingTransferMax: 560,
+    debitCreditRatio: 0.5,
     suburbs: ['CABOOLTURE', 'MORAYFIELD', 'BURPENGARY'],
   },
   leaveOverrides: [
