@@ -112,7 +112,9 @@ export function generateBankStatement(config: AppConfig, payslips: Payslip[]): B
   const ratio = bc.debitCreditRatio ?? 0.5;
   const creditBias = ratio;
   const debitBias = 1 - ratio;
+  const TARGET_CREDIT_SURPLUS = 0.30;
   console.log('[BankStatement] Debit/Credit ratio:', ratio, '| creditBias:', creditBias.toFixed(2), '| debitBias:', debitBias.toFixed(2));
+  console.log('[BankStatement] Target: credits ~30% more than debits');
 
   const hasCustomDates = bc.statementStartDate && bc.statementLength;
   const hasPayslips = payslips.length > 0;
@@ -145,6 +147,15 @@ export function generateBankStatement(config: AppConfig, payslips: Payslip[]): B
     const key = ps.period.paymentDate.toISOString().split('T')[0];
     paymentDates.set(key, ps.netPay);
   }
+
+  const payslipDatesInRange = new Set<string>();
+  for (const [dateKey] of paymentDates) {
+    const d = new Date(dateKey);
+    if (d >= spanStart && d <= spanEnd) {
+      payslipDatesInRange.add(dateKey);
+    }
+  }
+  console.log('[BankStatement] Payslip dates within statement range:', Array.from(payslipDatesInRange));
 
   const spendMin = bc.dailySpendMin ?? 14;
   const spendMax = bc.dailySpendMax ?? 154;
@@ -319,6 +330,26 @@ export function generateBankStatement(config: AppConfig, payslips: Payslip[]): B
     current.setDate(current.getDate() + 1);
   }
 
+  const missedPayslipDates = Array.from(payslipDatesInRange).filter(dk => {
+    return !txs.some(t => {
+      const txKey = t.date.toISOString().split('T')[0];
+      return txKey === dk && t.description.includes('Salary/Wages');
+    });
+  });
+  for (const dk of missedPayslipDates) {
+    const amount = paymentDates.get(dk)!;
+    const d = new Date(dk);
+    balance = Math.round((balance + amount) * 100) / 100;
+    txs.push({
+      date: d,
+      description: `Direct Credit ${config.employer.name.toUpperCase()} Salary/Wages`,
+      credit: amount,
+      debit: 0,
+      balance,
+    });
+    console.log('[BankStatement] Added missed payslip deposit on', dk, 'for $' + amount.toFixed(2));
+  }
+
   const openingTx = txs.shift()!;
   const dayGroups = new Map<string, BankTransaction[]>();
   for (const tx of txs) {
@@ -347,6 +378,62 @@ export function generateBankStatement(config: AppConfig, payslips: Payslip[]): B
     tx.balance = recalcBal;
   }
   balance = recalcBal;
+
+  let totalCreditsPre = 0;
+  let totalDebitsPre = 0;
+  for (const tx of txs) {
+    if (tx.description === 'OPENING BALANCE') continue;
+    totalCreditsPre += tx.credit;
+    totalDebitsPre += tx.debit;
+  }
+  console.log('[BankStatement] Pre-adjustment totals - Credits:', totalCreditsPre.toFixed(2), 'Debits:', totalDebitsPre.toFixed(2));
+
+  const desiredCredits = totalDebitsPre * (1 + TARGET_CREDIT_SURPLUS);
+  if (totalCreditsPre > 0 && totalDebitsPre > 0) {
+    const creditDiff = desiredCredits - totalCreditsPre;
+    if (Math.abs(creditDiff) > 1) {
+      const payslipCreditTotal = txs
+        .filter(t => t.description.includes('Salary/Wages'))
+        .reduce((s, t) => s + t.credit, 0);
+      const nonPayslipCredits = totalCreditsPre - payslipCreditTotal;
+      const neededNonPayslipCredits = desiredCredits - payslipCreditTotal;
+
+      const creditTxs = txs.filter(t =>
+        t.credit > 0 &&
+        t.description !== 'OPENING BALANCE' &&
+        !t.description.includes('Salary/Wages')
+      );
+
+      if (creditTxs.length > 0 && nonPayslipCredits > 0) {
+        const nonPayslipScale = neededNonPayslipCredits / nonPayslipCredits;
+        for (const tx of creditTxs) {
+          tx.credit = Math.round(tx.credit * nonPayslipScale * 100) / 100;
+          if (tx.credit < 0.01) tx.credit = Math.round((0.5 + rand() * 5) * 100) / 100;
+        }
+        console.log('[BankStatement] Adjusted credits to enforce ~30% surplus. Scale:', nonPayslipScale.toFixed(3));
+      }
+    }
+  }
+
+  let runBal2 = config.bankConfig.openingBalance;
+  for (const tx of txs) {
+    if (tx.description === 'OPENING BALANCE') {
+      tx.balance = runBal2;
+      continue;
+    }
+    runBal2 = Math.round((runBal2 + tx.credit - tx.debit) * 100) / 100;
+    tx.balance = runBal2;
+  }
+  balance = runBal2;
+
+  let totalCreditsPost = 0;
+  let totalDebitsPost = 0;
+  for (const tx of txs) {
+    totalCreditsPost += tx.credit;
+    totalDebitsPost += tx.debit;
+  }
+  console.log('[BankStatement] Post-adjustment totals - Credits:', totalCreditsPost.toFixed(2), 'Debits:', totalDebitsPost.toFixed(2),
+    '| Surplus:', totalDebitsPost > 0 ? ((totalCreditsPost / totalDebitsPost - 1) * 100).toFixed(1) + '%' : 'N/A');
 
   const targetClosing = config.bankConfig.closingBalance;
   const currentDiff = Math.round((targetClosing - balance) * 100) / 100;
