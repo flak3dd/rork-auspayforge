@@ -63,6 +63,10 @@ export interface BankConfig {
   includeATM: boolean;
   includeCardlessCash: boolean;
   includeTransfers: boolean;
+  includeMortgageRent: boolean;
+  mortgageRentAmount: number;
+  mortgageRentLabel: 'mortgage' | 'rent';
+  mortgageRentDay: number;
   dailySpendMin: number;
   dailySpendMax: number;
   incomingTransferMin: number;
@@ -209,6 +213,10 @@ export const DEFAULT_CONFIG: AppConfig = {
     includeATM: true,
     includeCardlessCash: true,
     includeTransfers: true,
+    includeMortgageRent: false,
+    mortgageRentAmount: 1800,
+    mortgageRentLabel: 'mortgage',
+    mortgageRentDay: 1,
     dailySpendMin: 14,
     dailySpendMax: 154,
     incomingTransferMin: 50,

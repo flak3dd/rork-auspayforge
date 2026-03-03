@@ -230,6 +230,25 @@ export function generateBankStatement(config: AppConfig, payslips: Payslip[]): B
   while (current <= spanEnd) {
     const dateKey = current.toISOString().split('T')[0];
 
+    if (bc.includeMortgageRent && current.getDate() === (bc.mortgageRentDay ?? 1)) {
+      const baseAmount = bc.mortgageRentAmount ?? 1800;
+      const noise = Math.round((rand() * 2 - 1) * 100) / 100;
+      const mrAmount = Math.round((baseAmount + noise) * 100) / 100;
+      const label = bc.mortgageRentLabel === 'rent' ? 'RENT' : 'MORTGAGE';
+      const payee = label === 'RENT'
+        ? pick(['RAY WHITE PROPERTY MGMT', 'LJ HOOKER TRUST', 'HARCOURTS RENTAL', 'BELLE PROPERTY MGMT', 'MCGRATH ESTATE AGENTS'], rand)
+        : pick(['COMMONWEALTH BANK HOMELOAN', 'WESTPAC HOME LOAN', 'ANZ HOME LOAN', 'NAB HOUSING LOAN', 'MACQUARIE BANK MORTGAGE'], rand);
+      balance = Math.round((balance - mrAmount) * 100) / 100;
+      txs.push({
+        date: new Date(current),
+        description: `Direct Debit ${payee}\n${label} PAYMENT`,
+        credit: 0,
+        debit: mrAmount,
+        balance,
+      });
+      console.log('[BankStatement] Added ' + label + ' payment on ' + dateKey + ' for $' + mrAmount.toFixed(2));
+    }
+
     if (bc.includePension && (current.getDay() === 5 || current.getDate() === 8 || current.getDate() === 22)) {
       const income = Math.round((rand() * 560 + 820) * 100) / 100;
       const code = generatePensionCode(rand);

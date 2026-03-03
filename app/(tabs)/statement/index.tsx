@@ -37,6 +37,7 @@ import {
   Eye,
   EyeOff,
   MapPin,
+  Building2,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
@@ -125,6 +126,10 @@ export default function StatementScreen() {
   const [suburb2, setSuburb2] = useState<string>(defaultSuburbs[1]);
   const [suburb3, setSuburb3] = useState<string>(defaultSuburbs[2]);
   const [debitCreditRatio, setDebitCreditRatio] = useState<number>(config.bankConfig.debitCreditRatio ?? 0.5);
+  const [includeMortgageRent, setIncludeMortgageRent] = useState<boolean>(config.bankConfig.includeMortgageRent ?? false);
+  const [mortgageRentAmount, setMortgageRentAmount] = useState<string>(String(config.bankConfig.mortgageRentAmount ?? 1800));
+  const [mortgageRentLabel, setMortgageRentLabel] = useState<'mortgage' | 'rent'>(config.bankConfig.mortgageRentLabel ?? 'mortgage');
+  const [mortgageRentDay, setMortgageRentDay] = useState<string>(String(config.bankConfig.mortgageRentDay ?? 1));
   const [showLocationSettings, setShowLocationSettings] = useState<boolean>(false);
 
   const [isRegenerating, setIsRegenerating] = useState<boolean>(false);
@@ -181,6 +186,10 @@ export default function StatementScreen() {
         incomingTransferMax: parseFloat(incomingTransferMax) || 560,
         debitCreditRatio,
         suburbs: [suburb1.trim() || 'CABOOLTURE', suburb2.trim() || 'MORAYFIELD', suburb3.trim() || 'BURPENGARY'],
+        includeMortgageRent,
+        mortgageRentAmount: parseFloat(mortgageRentAmount) || 1800,
+        mortgageRentLabel,
+        mortgageRentDay: parseInt(mortgageRentDay, 10) || 1,
       });
       console.log('[Statement] Regenerated with all custom options');
     } catch (error) {
@@ -192,7 +201,9 @@ export default function StatementScreen() {
     startDateInput, selectedLength, openingBalance, closingBalance,
     density, includePension, includeATM, includeCardlessCash, includeTransfers,
     dailySpendMin, dailySpendMax, incomingTransferMin, incomingTransferMax,
-    debitCreditRatio, suburb1, suburb2, suburb3, regenerateStatement,
+    debitCreditRatio, suburb1, suburb2, suburb3,
+    includeMortgageRent, mortgageRentAmount, mortgageRentLabel, mortgageRentDay,
+    regenerateStatement,
   ]);
 
   const totalCredits = statement?.transactions.reduce((sum, tx) => sum + tx.credit, 0) ?? 0;
@@ -671,6 +682,78 @@ export default function StatementScreen() {
               includeCardlessCash,
               setIncludeCardlessCash,
               <CreditCard size={16} color={Colors.teal} />,
+            )}
+            {renderToggleRow(
+              'Mortgage / Rent',
+              includeMortgageRent,
+              setIncludeMortgageRent,
+              <Building2 size={16} color="#F59E0B" />,
+            )}
+
+            {includeMortgageRent && (
+              <View style={styles.mortgageSettings}>
+                <View style={styles.fieldGroup}>
+                  <View style={styles.fieldLabelRow}>
+                    <Text style={styles.fieldLabel}>Payment Type</Text>
+                  </View>
+                  <View style={styles.lengthPicker}>
+                    {(['mortgage', 'rent'] as const).map(opt => (
+                      <TouchableOpacity
+                        key={opt}
+                        style={[
+                          styles.lengthOption,
+                          mortgageRentLabel === opt && styles.lengthOptionActive,
+                        ]}
+                        onPress={() => {
+                          setMortgageRentLabel(opt);
+                          Haptics.selectionAsync();
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <Text
+                          style={[
+                            styles.lengthOptionText,
+                            mortgageRentLabel === opt && styles.lengthOptionTextActive,
+                          ]}
+                        >
+                          {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+                <View style={styles.fieldRow}>
+                  <View style={styles.fieldHalf}>
+                    <View style={styles.fieldLabelRow}>
+                      <Text style={styles.fieldLabel}>Amount</Text>
+                    </View>
+                    <View style={styles.currencyInputWrap}>
+                      <Text style={styles.currencyPrefix}>$</Text>
+                      <TextInput
+                        style={styles.currencyInput}
+                        value={mortgageRentAmount}
+                        onChangeText={setMortgageRentAmount}
+                        placeholder="1800"
+                        placeholderTextColor={Colors.textMuted}
+                        keyboardType="decimal-pad"
+                      />
+                    </View>
+                  </View>
+                  <View style={styles.fieldHalf}>
+                    <View style={styles.fieldLabelRow}>
+                      <Text style={styles.fieldLabel}>Day of Month</Text>
+                    </View>
+                    <TextInput
+                      style={styles.dateInput}
+                      value={mortgageRentDay}
+                      onChangeText={setMortgageRentDay}
+                      placeholder="1"
+                      placeholderTextColor={Colors.textMuted}
+                      keyboardType="number-pad"
+                    />
+                  </View>
+                </View>
+              </View>
             )}
           </View>
         )}
@@ -1677,5 +1760,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700' as const,
     color: '#fff',
+  },
+  mortgageSettings: {
+    marginTop: 8,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    gap: 12,
   },
 });
