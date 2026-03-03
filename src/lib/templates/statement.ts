@@ -237,17 +237,17 @@ body {margin: 0;padding: 0;font-family: Helvetica, sans-serif;color: #1A1A1A;-we
 .page {width: 210mm;height: 297mm;padding: 0 20mm;box-sizing: border-box;position: relative;background: #fff;page-break-after: always;}
 .header-main {display: flex;justify-content: space-between;align-items: flex-start;margin-bottom: 30px;}
 .bank-brand {display: flex;align-items: flex-start;gap: 12px;}
-.logo {width: 32px;height: auto;margin-top: 4px;}
+.logo {width: 42px;height: auto;margin-top: 4px;}
 .bank-details {font-size: 8.5pt;line-height: 1.1;}
 .statement-heading {color: #FFCC00;font-size: 32pt;font-weight: 400;margin: 0 0 10px 0;text-align: right;letter-spacing: -0.5pt;}
-.summary-table {width: 280px;border-collapse: collapse;font-size: 10pt;font-weight: 300;float: right;}
+.summary-table {width: 238px;border-collapse: collapse;font-size: 10pt;font-weight: 300;float: right;}
 .summary-table td {padding: 8px 0;border-top: 1.2pt solid #FFC523;}
 .summary-label {font-weight: bold;}
 .summary-value {text-align: right;}
 .sub-header {display: flex;justify-content: flex-end;padding: 20px 0;position: absolute;top: 12mm;right: 20mm;width: 224px;}
-.sub-header-box {width: 224px;}
+.sub-header-box {width: 238px;}
 .sub-header-row {display: flex;justify-content: space-between;padding: 5px 0;border-bottom: 1pt solid #FFC523;font-size: 10.5pt;}
-.smart-access {font-size: 22pt;font-weight: bold;margin-top: 40px;}
+.smart-access {font-size: 22pt;font-weight: 900;margin-top: 40px;}
 .yellow-divider {border-top: 1.8pt solid #FFC523;margin: 12px 0;}
 .transaction-table {width: 100%;border-collapse: collapse;font-size: 9pt;margin-top: 20px;}
 .transaction-table thead tr {background-color: #FFC523;}
@@ -261,7 +261,7 @@ body {margin: 0;padding: 0;font-family: Helvetica, sans-serif;color: #1A1A1A;-we
 .transaction-table th:nth-child(3) {width: 37mm;}
 .transaction-table th:nth-child(4) {width: 20mm;}
 .transaction-table th:nth-child(5) {width: 33mm;}
-.bar {position: absolute;top: 34mm;right: 20mm;width: 85mm;height: auto;}
+.bar {position: absolute;top: 34mm;right: 20mm;width: 95mm;height: auto;}
 .table-container {position: absolute;left: 20mm;width: 170mm;}
 .reference {position: absolute;top: 46mm;left: 20mm;font-size: 10pt;font-weight: bold;}
 .address {font-size: 10pt;line-height: 1.2;margin-top: 10px;}
