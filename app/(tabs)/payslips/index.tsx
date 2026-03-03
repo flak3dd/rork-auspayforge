@@ -7,13 +7,14 @@ import {
   TouchableOpacity,
   Dimensions,
 } from 'react-native';
-import { FileText, ChevronLeft, ChevronRight, Eye, HardHat, Briefcase } from 'lucide-react-native';
+import { FileText, ChevronLeft, ChevronRight, Eye, HardHat, Briefcase, Download, Share2 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import Colors from '@/constants/colors';
 import { usePayroll, PayslipTemplateType } from '@/providers/PayrollProvider';
 import PayslipCard from '@/components/PayslipCard';
 import HTMLRenderer from '@/components/HTMLRenderer';
+import { exportHTMLToPDF, exportAllPayslips } from '@/utils/export';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -42,10 +43,37 @@ export default function PayslipsScreen() {
     }
   }, [activeIndex, output]);
 
+  const [isExporting, setIsExporting] = useState<boolean>(false);
+
   const handleViewStatement = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.push('/preview');
   }, [router]);
+
+  const handleExportCurrent = useCallback(async () => {
+    if (!payslipHTMLs[activeIndex] || isExporting) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setIsExporting(true);
+    try {
+      const periodNum = activeIndex + 1;
+      await exportHTMLToPDF(payslipHTMLs[activeIndex], `Payslip_Period_${periodNum}`);
+      console.log('[Payslips] Exported payslip period', periodNum);
+    } finally {
+      setIsExporting(false);
+    }
+  }, [activeIndex, payslipHTMLs, isExporting]);
+
+  const handleExportAll = useCallback(async () => {
+    if (payslipHTMLs.length === 0 || isExporting) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setIsExporting(true);
+    try {
+      await exportAllPayslips(payslipHTMLs, 'All_Payslips');
+      console.log('[Payslips] Exported all payslips');
+    } finally {
+      setIsExporting(false);
+    }
+  }, [payslipHTMLs, isExporting]);
 
   const handleTemplateSwitch = useCallback((template: PayslipTemplateType) => {
     if (template === payslipTemplate) return;
@@ -158,6 +186,26 @@ export default function PayslipsScreen() {
       )}
 
       <View style={styles.bottomBar}>
+        <View style={styles.exportRow}>
+          <TouchableOpacity
+            style={styles.exportSmallBtn}
+            onPress={handleExportCurrent}
+            activeOpacity={0.7}
+            disabled={isExporting}
+          >
+            <Download size={15} color={Colors.accent} />
+            <Text style={styles.exportSmallText}>{isExporting ? 'Exporting...' : 'This Slip'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.exportSmallBtn}
+            onPress={handleExportAll}
+            activeOpacity={0.7}
+            disabled={isExporting}
+          >
+            <Share2 size={15} color={Colors.accent} />
+            <Text style={styles.exportSmallText}>{isExporting ? 'Exporting...' : 'All Slips'}</Text>
+          </TouchableOpacity>
+        </View>
         <View style={styles.bottomRow}>
           <TouchableOpacity
             style={styles.viewToggle}
@@ -319,6 +367,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     paddingBottom: 4,
+    gap: 8,
+  },
+  exportRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  exportSmallBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.accent + '30',
+  },
+  exportSmallText: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    color: Colors.accent,
   },
   bottomRow: {
     flexDirection: 'row',

@@ -4,20 +4,16 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
-import { Share as ShareIcon, FileText, LayoutGrid } from 'lucide-react-native';
+import { Download, FileText, LayoutGrid } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { usePayroll } from '@/providers/PayrollProvider';
 import HTMLRenderer from '@/components/HTMLRenderer';
+import { exportHTMLToPDF } from '@/utils/export';
 
 function fmt(n: number): string {
   return n.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-function fmtDate(d: Date): string {
-  return new Date(d).toLocaleDateString('en-AU', { day: '2-digit', month: 'short' });
 }
 
 export default function PreviewScreen() {
@@ -26,14 +22,19 @@ export default function PreviewScreen() {
 
   const statement = output?.bankStatement;
 
+  const [isExporting, setIsExporting] = useState<boolean>(false);
+
   const handleExport = useCallback(async () => {
+    if (!statementHTML || isExporting) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    Alert.alert(
-      'Export',
-      'Statement preview is ready. In production, this would generate a PDF via expo-print and share it.',
-      [{ text: 'OK' }]
-    );
-  }, []);
+    setIsExporting(true);
+    try {
+      await exportHTMLToPDF(statementHTML, 'Bank_Statement');
+      console.log('[Preview] Statement exported');
+    } finally {
+      setIsExporting(false);
+    }
+  }, [statementHTML, isExporting]);
 
   const toggleView = useCallback(() => {
     Haptics.selectionAsync();
@@ -99,9 +100,10 @@ export default function PreviewScreen() {
           style={styles.exportButton}
           onPress={handleExport}
           activeOpacity={0.8}
+          disabled={isExporting}
         >
-          <ShareIcon size={18} color={Colors.background} />
-          <Text style={styles.exportButtonText}>Export Statement</Text>
+          <Download size={18} color={Colors.background} />
+          <Text style={styles.exportButtonText}>{isExporting ? 'Exporting...' : 'Export Statement'}</Text>
         </TouchableOpacity>
       </View>
     </View>
