@@ -38,7 +38,7 @@ function generatePeriods(config: AppConfig): PayslipPeriod[] {
         break;
     }
 
-    const paymentDate = addDays(end, 5);
+    const paymentDate = addDays(end, config.payConfig.frequency === 'weekly' ? 3 : 5);
 
     periods.push({ index: i, startDate: start, endDate: end, paymentDate });
 
