@@ -82,8 +82,8 @@ body {margin: 0;padding: 0;font-family: Helvetica, Arial, sans-serif;color: #1A1
 .transaction-table th:nth-child(4) {width: 20mm;}
 .transaction-table th:nth-child(5) {width: 33mm;}
 .address {font-size: 10pt;line-height: 1.2;margin-top: 10px;}
-.barcode-section {width: 100%;margin: 8px 0 4px 0;}
-.barcode-img {width: 100%;height: auto;display: block;}
+.barcode-section {width: 100%;margin: 8px 0 4px 0;display: flex;justify-content: flex-end;}
+.barcode-img {width: 50%;height: auto;display: block;}
 @media screen {
   body {background: #e8e8e8;padding: 20px;}
   .page {margin: 0 auto 30px;box-shadow: 0 2px 20px rgba(0,0,0,0.15);border-radius: 2px;}
@@ -132,8 +132,8 @@ ${logoImg}
 <div class="sub-header-row"><span style="font-weight:600;">Account Number</span><span>${bsbAcct}</span></div>
 </div>
 </div>
-${barcodeImg}
-<table class="transaction-table" style="margin-top:${barcodeImg ? '12' : '60'}px;">
+${p === 1 ? barcodeImg : ''}
+<table class="transaction-table" style="margin-top:${(p === 1 && barcodeImg) ? '12' : '60'}px;">
 <thead><tr><th>Date</th><th>Transaction</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead>
 <tbody>`;
     pageTxs.forEach(tx => { html += txRow(tx); });

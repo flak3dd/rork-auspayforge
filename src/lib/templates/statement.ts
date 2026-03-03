@@ -261,7 +261,7 @@ body {margin: 0;padding: 0;font-family: Helvetica, sans-serif;color: #1A1A1A;-we
 .transaction-table th:nth-child(3) {width: 37mm;}
 .transaction-table th:nth-child(4) {width: 20mm;}
 .transaction-table th:nth-child(5) {width: 33mm;}
-.bar {position: absolute;top: 34mm;left: 20mm;width: 170mm;height: 47mm;}
+.bar {position: absolute;top: 34mm;right: 20mm;width: 85mm;height: auto;}
 .table-container {position: absolute;left: 20mm;width: 170mm;}
 .reference {position: absolute;top: 46mm;left: 20mm;font-size: 10pt;font-weight: bold;}
 .address {font-size: 10pt;line-height: 1.2;margin-top: 10px;}
