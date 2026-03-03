@@ -6,6 +6,8 @@ import {
   ScrollView,
   TouchableOpacity,
   Animated,
+  TextInput,
+  Platform,
 } from 'react-native';
 import {
   Landmark,
@@ -20,6 +22,9 @@ import {
   TrendingUp,
   TrendingDown,
   ArrowRight,
+  RefreshCw,
+  Calendar,
+  Clock,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
@@ -35,11 +40,53 @@ function fmtDate(d: Date): string {
   return new Date(d).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
+type StatementLength = 30 | 60 | 90;
+
+const LENGTH_OPTIONS: { value: StatementLength; label: string }[] = [
+  { value: 30, label: '30 Days' },
+  { value: 60, label: '60 Days' },
+  { value: 90, label: '90 Days' },
+];
+
+function formatInputDate(dateStr: string): string {
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
+  } catch {
+    return dateStr;
+  }
+}
+
+function parseInputToISO(input: string): string | null {
+  const trimmed = input.trim();
+  const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (isoMatch) return trimmed;
+
+  const slashMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (slashMatch) {
+    const [, dd, mm, yyyy] = slashMatch;
+    return `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+  }
+
+  const dashMatch = trimmed.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if (dashMatch) {
+    const [, dd, mm, yyyy] = dashMatch;
+    return `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+  }
+
+  return null;
+}
+
 export default function StatementScreen() {
-  const { output, statementHTML, config } = usePayroll();
+  const { output, statementHTML, config, regenerateStatement } = usePayroll();
   const [viewMode, setViewMode] = useState<'overview' | 'document'>('overview');
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [showPayDates, setShowPayDates] = useState<boolean>(true);
+  const [showSettings, setShowSettings] = useState<boolean>(false);
+  const [startDateInput, setStartDateInput] = useState<string>(config.bankConfig.statementStartDate);
+  const [selectedLength, setSelectedLength] = useState<StatementLength>(config.bankConfig.statementLength);
+  const [isRegenerating, setIsRegenerating] = useState<boolean>(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   const statement = output?.bankStatement;
@@ -69,6 +116,22 @@ export default function StatementScreen() {
     Haptics.selectionAsync();
     setViewMode(prev => prev === 'overview' ? 'document' : 'overview');
   }, []);
+
+  const handleRegenerate = useCallback(() => {
+    const iso = parseInputToISO(startDateInput);
+    if (!iso) {
+      console.log('[Statement] Invalid date input:', startDateInput);
+      return;
+    }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setIsRegenerating(true);
+    try {
+      regenerateStatement(iso, selectedLength);
+      console.log('[Statement] Regenerated with start:', iso, 'length:', selectedLength);
+    } finally {
+      setIsRegenerating(false);
+    }
+  }, [startDateInput, selectedLength, regenerateStatement]);
 
   const totalCredits = statement?.transactions.reduce((sum, tx) => sum + tx.credit, 0) ?? 0;
   const totalDebits = statement?.transactions.reduce((sum, tx) => sum + tx.debit, 0) ?? 0;
@@ -148,6 +211,102 @@ export default function StatementScreen() {
           <CalendarRange size={14} color={Colors.textSecondary} />
           <Text style={styles.periodText}>{statement.statementPeriod}</Text>
         </View>
+      </View>
+
+      <View style={styles.settingsCard}>
+        <TouchableOpacity
+          style={styles.settingsHeader}
+          onPress={() => {
+            setShowSettings(!showSettings);
+            Haptics.selectionAsync();
+          }}
+          activeOpacity={0.7}
+        >
+          <View style={styles.settingsHeaderLeft}>
+            <View style={styles.settingsIconWrap}>
+              <Clock size={16} color={Colors.accent} />
+            </View>
+            <Text style={styles.settingsTitle}>Statement Period</Text>
+          </View>
+          {showSettings ? (
+            <ChevronUp size={18} color={Colors.textMuted} />
+          ) : (
+            <ChevronDown size={18} color={Colors.textMuted} />
+          )}
+        </TouchableOpacity>
+
+        {showSettings && (
+          <View style={styles.settingsBody}>
+            <View style={styles.fieldGroup}>
+              <View style={styles.fieldLabelRow}>
+                <Calendar size={13} color={Colors.textSecondary} />
+                <Text style={styles.fieldLabel}>Start Date</Text>
+              </View>
+              <TextInput
+                style={styles.dateInput}
+                value={startDateInput}
+                onChangeText={setStartDateInput}
+                placeholder="YYYY-MM-DD or DD/MM/YYYY"
+                placeholderTextColor={Colors.textMuted}
+                keyboardType={Platform.OS === 'web' ? 'default' : 'default'}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              <Text style={styles.fieldHint}>
+                {parseInputToISO(startDateInput)
+                  ? formatInputDate(parseInputToISO(startDateInput)!)
+                  : 'Invalid date format'}
+              </Text>
+            </View>
+
+            <View style={styles.fieldGroup}>
+              <View style={styles.fieldLabelRow}>
+                <CalendarRange size={13} color={Colors.textSecondary} />
+                <Text style={styles.fieldLabel}>Statement Length</Text>
+              </View>
+              <View style={styles.lengthPicker}>
+                {LENGTH_OPTIONS.map(opt => (
+                  <TouchableOpacity
+                    key={opt.value}
+                    style={[
+                      styles.lengthOption,
+                      selectedLength === opt.value && styles.lengthOptionActive,
+                    ]}
+                    onPress={() => {
+                      setSelectedLength(opt.value);
+                      Haptics.selectionAsync();
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[
+                        styles.lengthOptionText,
+                        selectedLength === opt.value && styles.lengthOptionTextActive,
+                      ]}
+                    >
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={[
+                styles.regenerateBtn,
+                (!parseInputToISO(startDateInput) || isRegenerating) && styles.regenerateBtnDisabled,
+              ]}
+              onPress={handleRegenerate}
+              activeOpacity={0.8}
+              disabled={!parseInputToISO(startDateInput) || isRegenerating}
+            >
+              <RefreshCw size={16} color="#fff" />
+              <Text style={styles.regenerateBtnText}>
+                {isRegenerating ? 'Regenerating...' : 'Regenerate Statement'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       <View style={styles.statsGrid}>
@@ -602,5 +761,115 @@ const styles = StyleSheet.create({
   },
   bottomPad: {
     height: 30,
+  },
+  settingsCard: {
+    backgroundColor: Colors.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginBottom: 14,
+    overflow: 'hidden',
+  },
+  settingsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+  },
+  settingsHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  settingsIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 9,
+    backgroundColor: Colors.accent + '18',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  settingsTitle: {
+    fontSize: 15,
+    fontWeight: '700' as const,
+    color: Colors.text,
+  },
+  settingsBody: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    gap: 16,
+  },
+  fieldGroup: {
+    gap: 6,
+  },
+  fieldLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  fieldLabel: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    color: Colors.textSecondary,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.6,
+  },
+  dateInput: {
+    backgroundColor: Colors.inputBg,
+    borderWidth: 1,
+    borderColor: Colors.inputBorder,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: Colors.text,
+    fontVariant: ['tabular-nums'] as const,
+  },
+  fieldHint: {
+    fontSize: 12,
+    color: Colors.textMuted,
+    marginTop: 2,
+  },
+  lengthPicker: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  lengthOption: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: Colors.cardElevated,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+  },
+  lengthOptionActive: {
+    borderColor: Colors.accent,
+    backgroundColor: Colors.accent + '15',
+  },
+  lengthOptionText: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: Colors.textMuted,
+  },
+  lengthOptionTextActive: {
+    color: Colors.accent,
+  },
+  regenerateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 13,
+    borderRadius: 12,
+    backgroundColor: Colors.accent,
+  },
+  regenerateBtnDisabled: {
+    opacity: 0.5,
+  },
+  regenerateBtnText: {
+    fontSize: 14,
+    fontWeight: '700' as const,
+    color: '#fff',
   },
 });

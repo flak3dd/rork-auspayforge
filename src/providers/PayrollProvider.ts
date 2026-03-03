@@ -101,6 +101,25 @@ export const [PayrollProvider, usePayroll] = createContextHook(() => {
     setPayslipHTMLs(htmls);
   }, [output]);
 
+  const regenerateStatement = useCallback((startDate: string, length: 30 | 60 | 90) => {
+    if (!output) return;
+    console.log('[PayrollProvider] Regenerating statement with startDate:', startDate, 'length:', length);
+    const updatedConfig: AppConfig = {
+      ...config,
+      bankConfig: {
+        ...config.bankConfig,
+        statementStartDate: startDate,
+        statementLength: length,
+      },
+    };
+    setConfig(updatedConfig);
+    const bankStatement: BankStatement = generateBankStatement(updatedConfig, output.payslips);
+    const stmtHTML = generateStatementHTML(bankStatement, updatedConfig);
+    setStatementHTML(stmtHTML);
+    setOutput(prev => prev ? { ...prev, bankStatement } : null);
+    console.log('[PayrollProvider] Statement regenerated with', bankStatement.transactions.length, 'transactions');
+  }, [output, config]);
+
   const resetConfig = useCallback(() => {
     setConfig(DEFAULT_CONFIG);
     setOutput(null);
@@ -121,5 +140,6 @@ export const [PayrollProvider, usePayroll] = createContextHook(() => {
     setPayslipTemplate: regenerateHTMLs,
     payslipHTMLs,
     statementHTML,
+    regenerateStatement,
   };
 });

@@ -51,6 +51,8 @@ export interface BankConfig {
   holderName: string;
   openingBalance: number;
   closingBalance: number;
+  statementStartDate: string;
+  statementLength: 30 | 60 | 90;
 }
 
 export interface LeaveOverride {
@@ -180,6 +182,8 @@ export const DEFAULT_CONFIG: AppConfig = {
     holderName: 'Jane Smith',
     openingBalance: 200,
     closingBalance: 1000,
+    statementStartDate: new Date().toISOString().split('T')[0],
+    statementLength: 30,
   },
   leaveOverrides: [
     { takenHoursAnnual: 0, takenHoursPersonal: 0 },

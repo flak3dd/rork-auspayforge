@@ -81,8 +81,15 @@ export function generateBankStatement(config: AppConfig, payslips: Payslip[]): B
   const rand = seededRandom(Date.now());
   const txs: BankTransaction[] = [];
 
-  const spanStart = addDays(payslips[0].period.startDate, -7);
-  const spanEnd = addDays(payslips[payslips.length - 1].period.paymentDate, 7);
+  const hasCustomDates = config.bankConfig.statementStartDate && config.bankConfig.statementLength;
+  const spanStart = hasCustomDates
+    ? new Date(config.bankConfig.statementStartDate)
+    : addDays(payslips[0].period.startDate, -7);
+  const spanEnd = hasCustomDates
+    ? addDays(spanStart, config.bankConfig.statementLength)
+    : addDays(payslips[payslips.length - 1].period.paymentDate, 7);
+
+  console.log('[BankStatement] Statement period:', formatDate(spanStart), '-', formatDate(spanEnd), `(${config.bankConfig.statementLength} days)`);
 
   let balance = config.bankConfig.openingBalance;
 
