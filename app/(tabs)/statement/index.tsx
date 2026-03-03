@@ -120,10 +120,11 @@ export default function StatementScreen() {
   const [dailySpendMax, setDailySpendMax] = useState<string>(String(config.bankConfig.dailySpendMax));
   const [incomingTransferMin, setIncomingTransferMin] = useState<string>(String(config.bankConfig.incomingTransferMin));
   const [incomingTransferMax, setIncomingTransferMax] = useState<string>(String(config.bankConfig.incomingTransferMax));
-  const [suburb1, setSuburb1] = useState<string>(config.bankConfig.suburbs[0]);
-  const [suburb2, setSuburb2] = useState<string>(config.bankConfig.suburbs[1]);
-  const [suburb3, setSuburb3] = useState<string>(config.bankConfig.suburbs[2]);
-  const [debitCreditRatio, setDebitCreditRatio] = useState<number>(config.bankConfig.debitCreditRatio);
+  const defaultSuburbs = config.bankConfig.suburbs ?? ['CABOOLTURE', 'MORAYFIELD', 'BURPENGARY'];
+  const [suburb1, setSuburb1] = useState<string>(defaultSuburbs[0]);
+  const [suburb2, setSuburb2] = useState<string>(defaultSuburbs[1]);
+  const [suburb3, setSuburb3] = useState<string>(defaultSuburbs[2]);
+  const [debitCreditRatio, setDebitCreditRatio] = useState<number>(config.bankConfig.debitCreditRatio ?? 0.5);
   const [showLocationSettings, setShowLocationSettings] = useState<boolean>(false);
 
   const [isRegenerating, setIsRegenerating] = useState<boolean>(false);
