@@ -51,6 +51,9 @@ export const TEMPLATES: PayrollTemplate[] = [
         holderName: 'Liam Patterson',
         openingBalance: 3420.55,
         closingBalance: 4810.30,
+        statementStartDate: '2025-07-01',
+        statementLength: 30,
+        monthlySpendTarget: 3000,
       },
       leaveOverrides: [
         { takenHoursAnnual: 0, takenHoursPersonal: 0 },
@@ -102,6 +105,9 @@ export const TEMPLATES: PayrollTemplate[] = [
         holderName: 'Sophie Nguyen',
         openingBalance: 870.20,
         closingBalance: 1245.60,
+        statementStartDate: '2025-07-07',
+        statementLength: 30,
+        monthlySpendTarget: 1800,
       },
       leaveOverrides: [
         { takenHoursAnnual: 0, takenHoursPersonal: 0 },
@@ -155,6 +161,9 @@ export const TEMPLATES: PayrollTemplate[] = [
         holderName: 'Jake Morrison',
         openingBalance: 1580.00,
         closingBalance: 2320.45,
+        statementStartDate: '2025-07-07',
+        statementLength: 30,
+        monthlySpendTarget: 2500,
       },
       leaveOverrides: [
         { takenHoursAnnual: 0, takenHoursPersonal: 0 },
@@ -208,6 +217,9 @@ export const TEMPLATES: PayrollTemplate[] = [
         holderName: 'Rebecca Chen',
         openingBalance: 12450.00,
         closingBalance: 18920.75,
+        statementStartDate: '2025-07-01',
+        statementLength: 30,
+        monthlySpendTarget: 6000,
       },
       leaveOverrides: [
         { takenHoursAnnual: 0, takenHoursPersonal: 0 },
@@ -258,6 +270,9 @@ export const TEMPLATES: PayrollTemplate[] = [
         holderName: 'Mia Thompson',
         openingBalance: 245.00,
         closingBalance: 680.30,
+        statementStartDate: '2025-07-07',
+        statementLength: 30,
+        monthlySpendTarget: 1200,
       },
       leaveOverrides: [
         { takenHoursAnnual: 0, takenHoursPersonal: 0 },
@@ -308,6 +323,9 @@ export const TEMPLATES: PayrollTemplate[] = [
         holderName: 'Daniel Kowalski',
         openingBalance: 920.00,
         closingBalance: 1540.20,
+        statementStartDate: '2025-07-14',
+        statementLength: 30,
+        monthlySpendTarget: 2000,
       },
       leaveOverrides: [
         { takenHoursAnnual: 0, takenHoursPersonal: 0 },

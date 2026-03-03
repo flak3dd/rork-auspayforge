@@ -82,12 +82,17 @@ export function generateBankStatement(config: AppConfig, payslips: Payslip[]): B
   const txs: BankTransaction[] = [];
 
   const hasCustomDates = config.bankConfig.statementStartDate && config.bankConfig.statementLength;
+  const hasPayslips = payslips.length > 0;
   const spanStart = hasCustomDates
     ? new Date(config.bankConfig.statementStartDate)
-    : addDays(payslips[0].period.startDate, -7);
+    : hasPayslips
+      ? addDays(payslips[0].period.startDate, -7)
+      : new Date();
   const spanEnd = hasCustomDates
     ? addDays(spanStart, config.bankConfig.statementLength)
-    : addDays(payslips[payslips.length - 1].period.paymentDate, 7);
+    : hasPayslips
+      ? addDays(payslips[payslips.length - 1].period.paymentDate, 7)
+      : addDays(spanStart, 30);
 
   console.log('[BankStatement] Statement period:', formatDate(spanStart), '-', formatDate(spanEnd), `(${config.bankConfig.statementLength} days)`);
 
