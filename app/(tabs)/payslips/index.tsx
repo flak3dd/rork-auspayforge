@@ -7,9 +7,8 @@ import {
   TouchableOpacity,
   Dimensions,
 } from 'react-native';
-import { FileText, ChevronLeft, ChevronRight, Eye, HardHat, Briefcase, Download, Share2 } from 'lucide-react-native';
+import { FileText, ChevronLeft, ChevronRight, HardHat, Briefcase, Download, Share2, Calendar } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
 import Colors from '@/constants/colors';
 import { usePayroll, PayslipTemplateType } from '@/providers/PayrollProvider';
 import PayslipCard from '@/components/PayslipCard';
@@ -18,9 +17,16 @@ import { exportHTMLToPDF, exportAllPayslips } from '@/utils/export';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
+function fmt(n: number): string {
+  return Math.abs(n).toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function fmtShortDate(d: Date): string {
+  return new Date(d).toLocaleDateString('en-AU', { day: '2-digit', month: 'short' });
+}
+
 export default function PayslipsScreen() {
   const { output, payslipTemplate, setPayslipTemplate, payslipHTMLs } = usePayroll();
-  const router = useRouter();
   const [activeIndex, setActiveIndex] = useState<number>(0);
   const [viewMode, setViewMode] = useState<'card' | 'html'>('card');
   const scrollRef = useRef<ScrollView>(null);
@@ -44,11 +50,6 @@ export default function PayslipsScreen() {
   }, [activeIndex, output]);
 
   const [isExporting, setIsExporting] = useState<boolean>(false);
-
-  const handleViewStatement = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    router.push('/preview');
-  }, [router]);
 
   const handleExportCurrent = useCallback(async () => {
     if (!payslipHTMLs[activeIndex] || isExporting) return;
@@ -103,11 +104,13 @@ export default function PayslipsScreen() {
         </View>
         <Text style={styles.emptyTitle}>No Payslips Generated</Text>
         <Text style={styles.emptySubtitle}>
-          Select a template on the Forge tab and tap "Forge Payslips" to get started
+          Select a template on the Forge tab and tap Forge Payslips to get started
         </Text>
       </View>
     );
   }
+
+  const currentPayslip = output.payslips[activeIndex];
 
   return (
     <View style={styles.container}>
@@ -128,6 +131,24 @@ export default function PayslipsScreen() {
           <HardHat size={14} color={payslipTemplate === 'construction' ? '#FF9500' : Colors.textMuted} />
           <Text style={[styles.templateBtnText, payslipTemplate === 'construction' && styles.templateBtnTextActive, payslipTemplate === 'construction' && { color: '#FF9500' }]}>Construction</Text>
         </TouchableOpacity>
+      </View>
+
+      <View style={styles.paymentInfo}>
+        <View style={styles.paymentInfoLeft}>
+          <View style={styles.paymentDateBadge}>
+            <Calendar size={13} color={Colors.accent} />
+            <Text style={styles.paymentDateText}>
+              {fmtShortDate(currentPayslip.period.startDate)} – {fmtShortDate(currentPayslip.period.endDate)}
+            </Text>
+          </View>
+          <Text style={styles.paidOnText}>
+            Paid {fmtShortDate(currentPayslip.period.paymentDate)}
+          </Text>
+        </View>
+        <View style={styles.paymentInfoRight}>
+          <Text style={styles.netPayLabel}>Net Pay</Text>
+          <Text style={styles.netPayAmount}>${fmt(currentPayslip.netPay)}</Text>
+        </View>
       </View>
 
       <View style={styles.navBar}>
@@ -205,23 +226,13 @@ export default function PayslipsScreen() {
             <Share2 size={15} color={Colors.accent} />
             <Text style={styles.exportSmallText}>{isExporting ? 'Exporting...' : 'All Slips'}</Text>
           </TouchableOpacity>
-        </View>
-        <View style={styles.bottomRow}>
           <TouchableOpacity
             style={styles.viewToggle}
             onPress={toggleViewMode}
             activeOpacity={0.7}
           >
-            <FileText size={16} color={Colors.accent} />
-            <Text style={styles.viewToggleText}>{viewMode === 'card' ? 'Preview HTML' : 'Card View'}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.statementButton}
-            onPress={handleViewStatement}
-            activeOpacity={0.8}
-          >
-            <Eye size={18} color={Colors.background} />
-            <Text style={styles.statementButtonText}>View Statement</Text>
+            <FileText size={15} color={Colors.accent} />
+            <Text style={styles.exportSmallText}>{viewMode === 'card' ? 'HTML' : 'Card'}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -296,6 +307,52 @@ const styles = StyleSheet.create({
     color: Colors.accent,
     fontWeight: '700' as const,
   },
+  paymentInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginHorizontal: 16,
+    marginTop: 10,
+    backgroundColor: Colors.card,
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  paymentInfoLeft: {
+    gap: 4,
+  },
+  paymentDateBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  paymentDateText: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    color: Colors.text,
+  },
+  paidOnText: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    marginLeft: 19,
+  },
+  paymentInfoRight: {
+    alignItems: 'flex-end',
+  },
+  netPayLabel: {
+    fontSize: 10,
+    fontWeight: '600' as const,
+    color: Colors.textMuted,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.6,
+  },
+  netPayAmount: {
+    fontSize: 20,
+    fontWeight: '800' as const,
+    color: Colors.success,
+    fontVariant: ['tabular-nums'] as const,
+  },
   navBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -367,7 +424,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     paddingBottom: 4,
-    gap: 8,
   },
   exportRow: {
     flexDirection: 'row',
@@ -390,40 +446,16 @@ const styles = StyleSheet.create({
     fontWeight: '600' as const,
     color: Colors.accent,
   },
-  bottomRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
   viewToggle: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 12,
+    paddingVertical: 10,
     paddingHorizontal: 14,
-    borderRadius: 14,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: Colors.accent + '50',
+    borderColor: Colors.accent + '30',
     backgroundColor: Colors.card,
-  },
-  viewToggleText: {
-    fontSize: 13,
-    fontWeight: '600' as const,
-    color: Colors.accent,
-  },
-  statementButton: {
-    flex: 1,
-    backgroundColor: Colors.accent,
-    borderRadius: 14,
-    paddingVertical: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  statementButtonText: {
-    fontSize: 15,
-    fontWeight: '700' as const,
-    color: Colors.background,
   },
 });

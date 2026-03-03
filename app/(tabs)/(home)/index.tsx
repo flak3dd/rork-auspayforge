@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Zap, ChevronRight, Sparkles, Shield } from 'lucide-react-native';
+import { Zap, ChevronRight, Shield, Sparkles, FileText, Landmark } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { TEMPLATES, PayrollTemplate } from '@/mocks/templates';
@@ -61,6 +61,8 @@ export default function HomeScreen() {
     }
   }, [selectedTemplate, generate, router]);
 
+  const hasOutput = output !== null && output.payslips.length > 0;
+
   return (
     <ScrollView
       style={styles.container}
@@ -78,6 +80,35 @@ export default function HomeScreen() {
           Generate realistic Australian payslips and bank statements in seconds
         </Text>
       </View>
+
+      {hasOutput && (
+        <View style={styles.quickNav}>
+          <TouchableOpacity
+            style={styles.quickNavBtn}
+            onPress={() => router.push('/payslips' as never)}
+            activeOpacity={0.7}
+          >
+            <FileText size={18} color={Colors.accent} />
+            <View style={styles.quickNavBtnBody}>
+              <Text style={styles.quickNavBtnTitle}>View Payslips</Text>
+              <Text style={styles.quickNavBtnSub}>{output.payslips.length} periods generated</Text>
+            </View>
+            <ChevronRight size={16} color={Colors.textMuted} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.quickNavBtn}
+            onPress={() => router.push('/statement' as never)}
+            activeOpacity={0.7}
+          >
+            <Landmark size={18} color="#FFCC00" />
+            <View style={styles.quickNavBtnBody}>
+              <Text style={styles.quickNavBtnTitle}>View Statement</Text>
+              <Text style={styles.quickNavBtnSub}>{output.bankStatement.transactions.length} transactions</Text>
+            </View>
+            <ChevronRight size={16} color={Colors.textMuted} />
+          </TouchableOpacity>
+        </View>
+      )}
 
       <View style={styles.statsRow}>
         <View style={styles.statCard}>
@@ -204,6 +235,33 @@ const styles = StyleSheet.create({
     marginTop: 6,
     lineHeight: 20,
     paddingHorizontal: 20,
+  },
+  quickNav: {
+    gap: 8,
+    marginBottom: 16,
+  },
+  quickNavBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.card,
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: 12,
+  },
+  quickNavBtnBody: {
+    flex: 1,
+  },
+  quickNavBtnTitle: {
+    fontSize: 15,
+    fontWeight: '700' as const,
+    color: Colors.text,
+  },
+  quickNavBtnSub: {
+    fontSize: 12,
+    color: Colors.textMuted,
+    marginTop: 2,
   },
   statsRow: {
     flexDirection: 'row',

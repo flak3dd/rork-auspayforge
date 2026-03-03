@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Hammer, FileText, History, Settings } from 'lucide-react-native';
+import { Hammer, FileText, Landmark, Settings } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 
 export default function TabLayout() {
@@ -35,10 +35,10 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="history"
+        name="statement"
         options={{
-          title: 'History',
-          tabBarIcon: ({ color, size }) => <History size={size} color={color} />,
+          title: 'Statement',
+          tabBarIcon: ({ color, size }) => <Landmark size={size} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -46,6 +46,12 @@ export default function TabLayout() {
         options={{
           title: 'Settings',
           tabBarIcon: ({ color, size }) => <Settings size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="history"
+        options={{
+          href: null,
         }}
       />
     </Tabs>
