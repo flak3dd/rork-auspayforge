@@ -54,7 +54,7 @@ Australian credit licence 234945
 <style>
 @page {size: A4;margin: 0;}
 body {margin: 0;padding: 0;font-family: Helvetica, Arial, sans-serif;color: #1A1A1A;-webkit-print-color-adjust: exact;font-weight: 300;font-size: 9pt;}
-.page {width: 210mm;min-height: 297mm;padding: 12mm 20mm 20mm;box-sizing: border-box;position: relative;background: #fff;page-break-after: always;}
+.page {width: 210mm;min-height: 297mm;padding: 12mm 20mm 25mm;box-sizing: border-box;position: relative;background: #fff;page-break-after: always;}
 .header-main {display: flex;justify-content: space-between;align-items: flex-start;margin-bottom: 30px;}
 .bank-brand {display: flex;align-items: flex-start;gap: 12px;}
 .logo-diamond {width: 32px;height: 32px;background-color: #FFCC00;transform: rotate(45deg);margin-top: 4px;flex-shrink:0;}
