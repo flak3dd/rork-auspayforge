@@ -13,7 +13,8 @@ import { generateBankStatement } from '@/utils/bankStatement';
 import { isConfigValid } from '@/utils/validation';
 import { generateGeneralPayslipHTML } from '@/lib/templates/generalPayslipTemplate';
 import { generateConstructionPayslipHTML } from '@/lib/templates/constructionPayslipTemplate';
-import { generateStatementHTML } from '@/utils/statementHTML';
+import { generateStatementHTML, StatementAssets } from '@/utils/statementHTML';
+import { loadStatementAssets } from '@/utils/assetLoader';
 
 export type PayslipTemplateType = 'general' | 'construction';
 
@@ -33,8 +34,23 @@ export const [PayrollProvider, usePayroll] = createContextHook(() => {
   const [payslipTemplate, setPayslipTemplate] = useState<PayslipTemplateType>('general');
   const [payslipHTMLs, setPayslipHTMLs] = useState<string[]>([]);
   const [statementHTML, setStatementHTML] = useState<string>('');
+  const [statementAssets, setStatementAssets] = useState<StatementAssets | null>(null);
 
   const validation = useMemo(() => isConfigValid(config), [config]);
+
+  const ensureAssets = useCallback(async (): Promise<StatementAssets | undefined> => {
+    if (statementAssets) return statementAssets;
+    try {
+      console.log('[PayrollProvider] Loading statement assets...');
+      const assets = await loadStatementAssets();
+      setStatementAssets(assets);
+      console.log('[PayrollProvider] Statement assets loaded');
+      return assets;
+    } catch (error) {
+      console.error('[PayrollProvider] Failed to load statement assets:', error);
+      return undefined;
+    }
+  }, [statementAssets]);
 
   const updateConfig = useCallback(<K extends keyof AppConfig>(key: K, value: AppConfig[K]) => {
     setConfig(prev => ({ ...prev, [key]: value }));
@@ -108,15 +124,16 @@ export const [PayrollProvider, usePayroll] = createContextHook(() => {
     }
   }, [config, detectTemplate]);
 
-  const generateStatementOnly = useCallback(() => {
+  const generateStatementOnly = useCallback(async () => {
     console.log('[PayrollProvider] Generating statement only...');
     setIsGeneratingStatement(true);
     try {
+      const assets = await ensureAssets();
       const payslips = output?.payslips ?? [];
       const bankStatement: BankStatement = generateBankStatement(config, payslips);
       console.log('[PayrollProvider] Generated bank statement with', bankStatement.transactions.length, 'transactions');
 
-      const stmtHTML = generateStatementHTML(bankStatement, config);
+      const stmtHTML = generateStatementHTML(bankStatement, config, assets);
       setStatementHTML(stmtHTML);
       console.log('[PayrollProvider] Generated statement HTML');
 
@@ -133,12 +150,13 @@ export const [PayrollProvider, usePayroll] = createContextHook(() => {
     } finally {
       setIsGeneratingStatement(false);
     }
-  }, [config, output]);
+  }, [config, output, ensureAssets]);
 
-  const generate = useCallback(() => {
+  const generate = useCallback(async () => {
     console.log('[PayrollProvider] Starting full generation...');
     setIsGenerating(true);
     try {
+      const assets = await ensureAssets();
       const payslips: Payslip[] = generatePayslips(config);
       console.log('[PayrollProvider] Generated', payslips.length, 'payslips');
 
@@ -153,7 +171,7 @@ export const [PayrollProvider, usePayroll] = createContextHook(() => {
       setPayslipHTMLs(htmls);
       console.log('[PayrollProvider] Generated', htmls.length, 'payslip HTML documents');
 
-      const stmtHTML = generateStatementHTML(bankStatement, config);
+      const stmtHTML = generateStatementHTML(bankStatement, config, assets);
       setStatementHTML(stmtHTML);
       console.log('[PayrollProvider] Generated statement HTML');
 
@@ -170,7 +188,7 @@ export const [PayrollProvider, usePayroll] = createContextHook(() => {
     } finally {
       setIsGenerating(false);
     }
-  }, [config, detectTemplate]);
+  }, [config, detectTemplate, ensureAssets]);
 
   const regenerateHTMLs = useCallback((template: PayslipTemplateType) => {
     if (!output) return;
@@ -180,9 +198,10 @@ export const [PayrollProvider, usePayroll] = createContextHook(() => {
     setPayslipHTMLs(htmls);
   }, [output]);
 
-  const regenerateStatement = useCallback((startDate: string, length: 30 | 60 | 90, bankOverrides?: Partial<BankConfig>) => {
+  const regenerateStatement = useCallback(async (startDate: string, length: 30 | 60 | 90, bankOverrides?: Partial<BankConfig>) => {
     if (!output) return;
     console.log('[PayrollProvider] Regenerating statement with startDate:', startDate, 'length:', length, 'overrides:', bankOverrides);
+    const assets = await ensureAssets();
     const updatedConfig: AppConfig = {
       ...config,
       bankConfig: {
@@ -194,11 +213,11 @@ export const [PayrollProvider, usePayroll] = createContextHook(() => {
     };
     setConfig(updatedConfig);
     const bankStatement: BankStatement = generateBankStatement(updatedConfig, output.payslips);
-    const stmtHTML = generateStatementHTML(bankStatement, updatedConfig);
+    const stmtHTML = generateStatementHTML(bankStatement, updatedConfig, assets);
     setStatementHTML(stmtHTML);
     setOutput(prev => prev ? { ...prev, bankStatement } : null);
     console.log('[PayrollProvider] Statement regenerated with', bankStatement.transactions.length, 'transactions');
-  }, [output, config]);
+  }, [output, config, ensureAssets]);
 
   const resetConfig = useCallback(() => {
     setConfig(DEFAULT_CONFIG);

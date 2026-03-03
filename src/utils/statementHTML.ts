@@ -1,5 +1,10 @@
 import type { BankStatement, BankTransaction, AppConfig } from '@/types/payroll';
 
+export interface StatementAssets {
+  logoUri: string;
+  barcodeUri: string;
+}
+
 function fmtAmount(n: number): string {
   return Math.abs(n).toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
@@ -16,11 +21,27 @@ function txRow(tx: BankTransaction): string {
   return `<tr><td>${fmtDate(tx.date)}</td><td style="line-height:1.28">${desc}</td><td>${debit}</td><td>${credit}</td><td>${bal}</td></tr>`;
 }
 
-export function generateStatementHTML(statement: BankStatement, config: AppConfig): string {
+export function generateStatementHTML(statement: BankStatement, config: AppConfig, assets?: StatementAssets): string {
   const totalPages = statement.pages.length;
   const bsbAcct = `${statement.bsb} ${statement.accountNumber}`;
   const holder = statement.accountHolder;
   const employerAddr = config.employer.address.replace(/\n/g, '<br>');
+
+  const logoImg = assets?.logoUri
+    ? `<img src="${assets.logoUri}" style="height:48px;width:auto;" />`
+    : `<div style="display:flex;align-items:flex-start;gap:12px;">
+<div class="logo-diamond"></div>
+<div class="bank-details">
+<strong>Commonwealth Bank</strong><br>
+Commonwealth Bank of Australia<br>
+ABN 48 123 123 124 AFSL and<br>
+Australian credit licence 234945
+</div>
+</div>`;
+
+  const barcodeImg = assets?.barcodeUri
+    ? `<div class="barcode-section"><img src="${assets.barcodeUri}" class="barcode-img" /></div>`
+    : '';
 
   let html = `<!DOCTYPE html>
 <html lang="en">
@@ -59,6 +80,8 @@ body {margin: 0;padding: 0;font-family: Helvetica, Arial, sans-serif;color: #1A1
 .transaction-table th:nth-child(4) {width: 20mm;}
 .transaction-table th:nth-child(5) {width: 33mm;}
 .address {font-size: 10pt;line-height: 1.2;margin-top: 10px;}
+.barcode-section {width: 100%;margin: 8px 0 4px 0;}
+.barcode-img {width: 100%;height: auto;display: block;}
 @media screen {
   body {background: #e8e8e8;padding: 20px;}
   .page {margin: 0 auto 30px;box-shadow: 0 2px 20px rgba(0,0,0,0.15);border-radius: 2px;}
@@ -70,13 +93,7 @@ body {margin: 0;padding: 0;font-family: Helvetica, Arial, sans-serif;color: #1A1
   html += `<div class="page">
 <div class="header-main">
 <div class="bank-brand">
-<div class="logo-diamond"></div>
-<div class="bank-details">
-<strong>Commonwealth Bank</strong><br>
-Commonwealth Bank of Australia<br>
-ABN 48 123 123 124 AFSL and<br>
-Australian credit licence 234945
-</div>
+${logoImg}
 </div>
 <div>
 <h1 class="statement-heading">Your Statement</h1>
@@ -113,7 +130,8 @@ Australian credit licence 234945
 <div class="sub-header-row"><span style="font-weight:600;">Account Number</span><span>${bsbAcct}</span></div>
 </div>
 </div>
-<table class="transaction-table" style="margin-top:60px;">
+${barcodeImg}
+<table class="transaction-table" style="margin-top:${barcodeImg ? '12' : '60'}px;">
 <thead><tr><th>Date</th><th>Transaction</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead>
 <tbody>`;
     pageTxs.forEach(tx => { html += txRow(tx); });
