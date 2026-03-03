@@ -24,8 +24,8 @@ export async function exportHTMLToPDF(html: string, filename: string): Promise<v
   try {
     const { uri } = await Print.printToFileAsync({
       html,
-      width: 612,
-      height: 792,
+      width: 595,
+      height: 842,
     });
     console.log('[Export] PDF saved to:', uri);
 

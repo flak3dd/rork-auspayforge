@@ -42,10 +42,20 @@ export function generateAdminFortnightlyPayslipHTML(payslip: Payslip, index: num
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Payslip - Period ${index + 1}</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        @page {
+            size: A4;
+            margin: 20mm 15mm 20mm 15mm;
+        }
+        html, body {
+            width: 210mm;
+            min-height: 297mm;
+            margin: 0;
+            padding: 0;
+        }
+        * { box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 30px;
+            padding: 20mm 15mm;
             font-size: 11px;
             color: #1a1a1a;
             line-height: 1.5;
@@ -57,7 +67,7 @@ export function generateAdminFortnightlyPayslipHTML(payslip: Payslip, index: num
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin: -30px -30px 20px -30px;
+            margin: -20mm -15mm 20px -15mm;
         }
         .header-bar h1 {
             font-size: 16px;

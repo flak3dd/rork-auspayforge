@@ -53,10 +53,19 @@ export function generateExecutiveMonthlyPayslipHTML(payslip: Payslip, index: num
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Payslip - Period ${index + 1}</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        @page {
+            size: A4;
+            margin: 20mm 15mm 20mm 15mm;
+        }
+        html, body {
+            width: 210mm;
+            min-height: 297mm;
+            margin: 0;
+            padding: 0;
+        }
+        * { box-sizing: border-box; }
         body {
             font-family: 'Georgia', 'Times New Roman', serif;
-            margin: 0;
             font-size: 11px;
             color: #2c2c2c;
             line-height: 1.6;

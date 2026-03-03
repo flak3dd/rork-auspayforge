@@ -58,12 +58,23 @@ export function generateGeneralPayslipHTML(payslip: Payslip, index: number): str
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Payslip - Period ${index + 1}</title>
     <style>
+        @page {
+            size: A4;
+            margin: 20mm 15mm 20mm 15mm;
+        }
+        html, body {
+            width: 210mm;
+            min-height: 297mm;
+            margin: 0;
+            padding: 0;
+        }
         body {
             font-family: Arial, sans-serif;
-            margin: 20px;
+            padding: 20mm 15mm;
             line-height: 1.4;
             color: #000;
             font-size: 12px;
+            box-sizing: border-box;
         }
         .header {
             text-align: center;
