@@ -45,6 +45,8 @@ export interface Allowance {
   fixedAmount: number;
 }
 
+export type TransactionDensity = 'low' | 'medium' | 'high';
+
 export interface BankConfig {
   bsb: string;
   accountNumber: string;
@@ -54,6 +56,15 @@ export interface BankConfig {
   statementStartDate: string;
   statementLength: 30 | 60 | 90;
   monthlySpendTarget: number;
+  transactionDensity: TransactionDensity;
+  includePension: boolean;
+  includeATM: boolean;
+  includeCardlessCash: boolean;
+  includeTransfers: boolean;
+  dailySpendMin: number;
+  dailySpendMax: number;
+  incomingTransferMin: number;
+  incomingTransferMax: number;
 }
 
 export interface LeaveOverride {
@@ -186,6 +197,15 @@ export const DEFAULT_CONFIG: AppConfig = {
     statementStartDate: new Date().toISOString().split('T')[0],
     statementLength: 30,
     monthlySpendTarget: 2500,
+    transactionDensity: 'medium',
+    includePension: true,
+    includeATM: true,
+    includeCardlessCash: true,
+    includeTransfers: true,
+    dailySpendMin: 14,
+    dailySpendMax: 154,
+    incomingTransferMin: 50,
+    incomingTransferMax: 560,
   },
   leaveOverrides: [
     { takenHoursAnnual: 0, takenHoursPersonal: 0 },

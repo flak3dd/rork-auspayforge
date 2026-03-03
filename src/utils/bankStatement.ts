@@ -80,23 +80,28 @@ function formatDate(date: Date): string {
 export function generateBankStatement(config: AppConfig, payslips: Payslip[]): BankStatement {
   const rand = seededRandom(Date.now());
   const txs: BankTransaction[] = [];
+  const bc = config.bankConfig;
 
-  const hasCustomDates = config.bankConfig.statementStartDate && config.bankConfig.statementLength;
+  const densityMultiplier = bc.transactionDensity === 'low' ? 0.4
+    : bc.transactionDensity === 'high' ? 1.4 : 1.0;
+
+  const hasCustomDates = bc.statementStartDate && bc.statementLength;
   const hasPayslips = payslips.length > 0;
   const spanStart = hasCustomDates
-    ? new Date(config.bankConfig.statementStartDate)
+    ? new Date(bc.statementStartDate)
     : hasPayslips
       ? addDays(payslips[0].period.startDate, -7)
       : new Date();
   const spanEnd = hasCustomDates
-    ? addDays(spanStart, config.bankConfig.statementLength)
+    ? addDays(spanStart, bc.statementLength)
     : hasPayslips
       ? addDays(payslips[payslips.length - 1].period.paymentDate, 7)
       : addDays(spanStart, 30);
 
-  console.log('[BankStatement] Statement period:', formatDate(spanStart), '-', formatDate(spanEnd), `(${config.bankConfig.statementLength} days)`);
+  console.log('[BankStatement] Statement period:', formatDate(spanStart), '-', formatDate(spanEnd), `(${bc.statementLength} days)`);
+  console.log('[BankStatement] Density:', bc.transactionDensity, '| Pension:', bc.includePension, '| ATM:', bc.includeATM, '| Cardless:', bc.includeCardlessCash, '| Transfers:', bc.includeTransfers);
 
-  let balance = config.bankConfig.openingBalance;
+  let balance = bc.openingBalance;
 
   txs.push({
     date: spanStart,
@@ -112,13 +117,18 @@ export function generateBankStatement(config: AppConfig, payslips: Payslip[]): B
     paymentDates.set(key, ps.netPay);
   }
 
+  const spendMin = bc.dailySpendMin ?? 14;
+  const spendMax = bc.dailySpendMax ?? 154;
+  const transferMin = bc.incomingTransferMin ?? 50;
+  const transferMax = bc.incomingTransferMax ?? 560;
+
   const current = new Date(spanStart);
   current.setDate(current.getDate() + 1);
 
   while (current <= spanEnd) {
     const dateKey = current.toISOString().split('T')[0];
 
-    if (current.getDay() === 5 || current.getDate() === 8 || current.getDate() === 22) {
+    if (bc.includePension && (current.getDay() === 5 || current.getDate() === 8 || current.getDate() === 22)) {
       const income = Math.round((rand() * 560 + 820) * 100) / 100;
       const code = generatePensionCode(rand);
       balance = Math.round((balance + income) * 100) / 100;
@@ -143,10 +153,11 @@ export function generateBankStatement(config: AppConfig, payslips: Payslip[]): B
       });
     }
 
-    if (rand() < 0.72) {
+    if (bc.includeTransfers && rand() < 0.72 * densityMultiplier) {
       const count = Math.floor(rand() * 4) + 2;
       for (let j = 0; j < count; j++) {
-        const amount = Math.round((rand() * 335 + 45) * 100) / 100;
+        const range = transferMax - transferMin;
+        const amount = Math.round((rand() * range + transferMin) * 100) / 100;
         const sender = pick(SENDERS, rand);
         const memo = pick(INCOMING_MEMOS, rand);
         balance = Math.round((balance + amount) * 100) / 100;
@@ -160,7 +171,7 @@ export function generateBankStatement(config: AppConfig, payslips: Payslip[]): B
       }
     }
 
-    if (rand() < 0.3) {
+    if (bc.includeTransfers && rand() < 0.3 * densityMultiplier) {
       const amount = Math.round((rand() * 800 + 200) * 100) / 100;
       const acc = pick(TRANSFER_ACCOUNTS, rand);
       balance = Math.round((balance + amount) * 100) / 100;
@@ -173,12 +184,13 @@ export function generateBankStatement(config: AppConfig, payslips: Payslip[]): B
       });
     }
 
-    if (rand() < 0.76) {
+    if (rand() < 0.76 * densityMultiplier) {
       const count = Math.floor(rand() * 3) + 1;
       for (let j = 0; j < count; j++) {
         const category = pick(MERCHANT_CATEGORIES, rand);
         const merchant = pick(MERCHANTS[category], rand);
-        const amount = Math.round((rand() * 154 + 14) * 100) / 100;
+        const spendRange = spendMax - spendMin;
+        const amount = Math.round((rand() * spendRange + spendMin) * 100) / 100;
         const priorDate = addDays(current, -Math.floor(rand() * 5));
         let desc: string;
         if (category === 'online') {
@@ -201,7 +213,7 @@ export function generateBankStatement(config: AppConfig, payslips: Payslip[]): B
       }
     }
 
-    if (rand() < 0.19) {
+    if (bc.includeATM && rand() < 0.19 * densityMultiplier) {
       const amounts = [80, 140, 200, 250, 350];
       const amount = pick(amounts, rand);
       const location = pick(ATM_LOCATIONS, rand);
@@ -215,7 +227,7 @@ export function generateBankStatement(config: AppConfig, payslips: Payslip[]): B
       });
     }
 
-    if (rand() < 0.3) {
+    if (bc.includeTransfers && rand() < 0.3 * densityMultiplier) {
       const amount = Math.round((rand() * 250 + 50) * 100) / 100;
       const recipient = pick(RECIPIENTS, rand);
       const memo = pick(INCOMING_MEMOS, rand);
@@ -229,7 +241,7 @@ export function generateBankStatement(config: AppConfig, payslips: Payslip[]): B
       });
     }
 
-    if (rand() < 0.15) {
+    if (bc.includeCardlessCash && rand() < 0.15 * densityMultiplier) {
       const amount = Math.round((rand() * 400 + 100) * 100) / 100;
       const memo = pick(CARDLESS_MEMOS, rand);
       balance = Math.round((balance - amount) * 100) / 100;

@@ -8,6 +8,7 @@ import {
   Animated,
   TextInput,
   Platform,
+  Switch,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
@@ -26,12 +27,22 @@ import {
   RefreshCw,
   Calendar,
   Clock,
+  Settings2,
+  Banknote,
+  Activity,
+  Wallet,
+  CircleDollarSign,
+  ArrowUpDown,
+  Layers,
+  Eye,
+  EyeOff,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { usePayroll } from '@/providers/PayrollProvider';
 import HTMLRenderer from '@/components/HTMLRenderer';
 import { exportHTMLToPDF } from '@/utils/export';
+import type { TransactionDensity } from '@/types/payroll';
 
 function fmt(n: number): string {
   return Math.abs(n).toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -47,6 +58,12 @@ const LENGTH_OPTIONS: { value: StatementLength; label: string }[] = [
   { value: 30, label: '30 Days' },
   { value: 60, label: '60 Days' },
   { value: 90, label: '90 Days' },
+];
+
+const DENSITY_OPTIONS: { value: TransactionDensity; label: string; desc: string }[] = [
+  { value: 'low', label: 'Low', desc: 'Fewer daily transactions' },
+  { value: 'medium', label: 'Medium', desc: 'Standard activity' },
+  { value: 'high', label: 'High', desc: 'Busy account' },
 ];
 
 function formatInputDate(dateStr: string): string {
@@ -84,9 +101,25 @@ export default function StatementScreen() {
   const [viewMode, setViewMode] = useState<'overview' | 'document'>('overview');
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [showPayDates, setShowPayDates] = useState<boolean>(true);
-  const [showSettings, setShowSettings] = useState<boolean>(false);
+  const [showPeriodSettings, setShowPeriodSettings] = useState<boolean>(false);
+  const [showBalanceSettings, setShowBalanceSettings] = useState<boolean>(false);
+  const [showTxSettings, setShowTxSettings] = useState<boolean>(false);
+  const [showAmountSettings, setShowAmountSettings] = useState<boolean>(false);
+
   const [startDateInput, setStartDateInput] = useState<string>(config.bankConfig.statementStartDate);
   const [selectedLength, setSelectedLength] = useState<StatementLength>(config.bankConfig.statementLength);
+  const [openingBalance, setOpeningBalance] = useState<string>(String(config.bankConfig.openingBalance));
+  const [closingBalance, setClosingBalance] = useState<string>(String(config.bankConfig.closingBalance));
+  const [density, setDensity] = useState<TransactionDensity>(config.bankConfig.transactionDensity);
+  const [includePension, setIncludePension] = useState<boolean>(config.bankConfig.includePension);
+  const [includeATM, setIncludeATM] = useState<boolean>(config.bankConfig.includeATM);
+  const [includeCardlessCash, setIncludeCardlessCash] = useState<boolean>(config.bankConfig.includeCardlessCash);
+  const [includeTransfers, setIncludeTransfers] = useState<boolean>(config.bankConfig.includeTransfers);
+  const [dailySpendMin, setDailySpendMin] = useState<string>(String(config.bankConfig.dailySpendMin));
+  const [dailySpendMax, setDailySpendMax] = useState<string>(String(config.bankConfig.dailySpendMax));
+  const [incomingTransferMin, setIncomingTransferMin] = useState<string>(String(config.bankConfig.incomingTransferMin));
+  const [incomingTransferMax, setIncomingTransferMax] = useState<string>(String(config.bankConfig.incomingTransferMax));
+
   const [isRegenerating, setIsRegenerating] = useState<boolean>(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -127,12 +160,29 @@ export default function StatementScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsRegenerating(true);
     try {
-      regenerateStatement(iso, selectedLength);
-      console.log('[Statement] Regenerated with start:', iso, 'length:', selectedLength);
+      regenerateStatement(iso, selectedLength, {
+        openingBalance: parseFloat(openingBalance) || 0,
+        closingBalance: parseFloat(closingBalance) || 0,
+        transactionDensity: density,
+        includePension,
+        includeATM,
+        includeCardlessCash,
+        includeTransfers,
+        dailySpendMin: parseFloat(dailySpendMin) || 14,
+        dailySpendMax: parseFloat(dailySpendMax) || 154,
+        incomingTransferMin: parseFloat(incomingTransferMin) || 50,
+        incomingTransferMax: parseFloat(incomingTransferMax) || 560,
+      });
+      console.log('[Statement] Regenerated with all custom options');
     } finally {
       setIsRegenerating(false);
     }
-  }, [startDateInput, selectedLength, regenerateStatement]);
+  }, [
+    startDateInput, selectedLength, openingBalance, closingBalance,
+    density, includePension, includeATM, includeCardlessCash, includeTransfers,
+    dailySpendMin, dailySpendMax, incomingTransferMin, incomingTransferMax,
+    regenerateStatement,
+  ]);
 
   const totalCredits = statement?.transactions.reduce((sum, tx) => sum + tx.credit, 0) ?? 0;
   const totalDebits = statement?.transactions.reduce((sum, tx) => sum + tx.debit, 0) ?? 0;
@@ -180,6 +230,29 @@ export default function StatementScreen() {
     );
   }
 
+  const renderToggleRow = (
+    label: string,
+    value: boolean,
+    onToggle: (v: boolean) => void,
+    icon: React.ReactNode,
+  ) => (
+    <View style={styles.toggleRow}>
+      <View style={styles.toggleRowLeft}>
+        {icon}
+        <Text style={styles.toggleRowLabel}>{label}</Text>
+      </View>
+      <Switch
+        value={value}
+        onValueChange={(v) => {
+          onToggle(v);
+          Haptics.selectionAsync();
+        }}
+        trackColor={{ false: Colors.border, true: Colors.accent + '60' }}
+        thumbColor={value ? Colors.accent : Colors.textMuted}
+      />
+    </View>
+  );
+
   return (
     <ScrollView
       style={styles.container}
@@ -223,11 +296,12 @@ export default function StatementScreen() {
         </View>
       </View>
 
+      {/* Period Settings */}
       <View style={styles.settingsCard}>
         <TouchableOpacity
           style={styles.settingsHeader}
           onPress={() => {
-            setShowSettings(!showSettings);
+            setShowPeriodSettings(!showPeriodSettings);
             Haptics.selectionAsync();
           }}
           activeOpacity={0.7}
@@ -236,16 +310,19 @@ export default function StatementScreen() {
             <View style={styles.settingsIconWrap}>
               <Clock size={16} color={Colors.accent} />
             </View>
-            <Text style={styles.settingsTitle}>Statement Period</Text>
+            <View>
+              <Text style={styles.settingsTitle}>Statement Period</Text>
+              <Text style={styles.settingsSubtitle}>Start date & duration</Text>
+            </View>
           </View>
-          {showSettings ? (
+          {showPeriodSettings ? (
             <ChevronUp size={18} color={Colors.textMuted} />
           ) : (
             <ChevronDown size={18} color={Colors.textMuted} />
           )}
         </TouchableOpacity>
 
-        {showSettings && (
+        {showPeriodSettings && (
           <View style={styles.settingsBody}>
             <View style={styles.fieldGroup}>
               <View style={styles.fieldLabelRow}>
@@ -300,24 +377,303 @@ export default function StatementScreen() {
                 ))}
               </View>
             </View>
-
-            <TouchableOpacity
-              style={[
-                styles.regenerateBtn,
-                (!parseInputToISO(startDateInput) || isRegenerating) && styles.regenerateBtnDisabled,
-              ]}
-              onPress={handleRegenerate}
-              activeOpacity={0.8}
-              disabled={!parseInputToISO(startDateInput) || isRegenerating}
-            >
-              <RefreshCw size={16} color="#fff" />
-              <Text style={styles.regenerateBtnText}>
-                {isRegenerating ? 'Regenerating...' : 'Regenerate Statement'}
-              </Text>
-            </TouchableOpacity>
           </View>
         )}
       </View>
+
+      {/* Balance Settings */}
+      <View style={styles.settingsCard}>
+        <TouchableOpacity
+          style={styles.settingsHeader}
+          onPress={() => {
+            setShowBalanceSettings(!showBalanceSettings);
+            Haptics.selectionAsync();
+          }}
+          activeOpacity={0.7}
+        >
+          <View style={styles.settingsHeaderLeft}>
+            <View style={[styles.settingsIconWrap, { backgroundColor: Colors.goldDim }]}>
+              <Wallet size={16} color={Colors.gold} />
+            </View>
+            <View>
+              <Text style={styles.settingsTitle}>Balances</Text>
+              <Text style={styles.settingsSubtitle}>Opening & closing amounts</Text>
+            </View>
+          </View>
+          {showBalanceSettings ? (
+            <ChevronUp size={18} color={Colors.textMuted} />
+          ) : (
+            <ChevronDown size={18} color={Colors.textMuted} />
+          )}
+        </TouchableOpacity>
+
+        {showBalanceSettings && (
+          <View style={styles.settingsBody}>
+            <View style={styles.fieldRow}>
+              <View style={styles.fieldHalf}>
+                <View style={styles.fieldLabelRow}>
+                  <Text style={styles.fieldLabel}>Opening Balance</Text>
+                </View>
+                <View style={styles.currencyInputWrap}>
+                  <Text style={styles.currencyPrefix}>$</Text>
+                  <TextInput
+                    style={styles.currencyInput}
+                    value={openingBalance}
+                    onChangeText={setOpeningBalance}
+                    placeholder="200"
+                    placeholderTextColor={Colors.textMuted}
+                    keyboardType="decimal-pad"
+                  />
+                </View>
+              </View>
+              <View style={styles.fieldHalf}>
+                <View style={styles.fieldLabelRow}>
+                  <Text style={styles.fieldLabel}>Closing Balance</Text>
+                </View>
+                <View style={styles.currencyInputWrap}>
+                  <Text style={styles.currencyPrefix}>$</Text>
+                  <TextInput
+                    style={styles.currencyInput}
+                    value={closingBalance}
+                    onChangeText={setClosingBalance}
+                    placeholder="1000"
+                    placeholderTextColor={Colors.textMuted}
+                    keyboardType="decimal-pad"
+                  />
+                </View>
+              </View>
+            </View>
+            <Text style={styles.fieldHint}>
+              The statement will adjust the final transaction to match your closing balance.
+            </Text>
+          </View>
+        )}
+      </View>
+
+      {/* Transaction Type Toggles */}
+      <View style={styles.settingsCard}>
+        <TouchableOpacity
+          style={styles.settingsHeader}
+          onPress={() => {
+            setShowTxSettings(!showTxSettings);
+            Haptics.selectionAsync();
+          }}
+          activeOpacity={0.7}
+        >
+          <View style={styles.settingsHeaderLeft}>
+            <View style={[styles.settingsIconWrap, { backgroundColor: 'rgba(59,130,246,0.15)' }]}>
+              <Layers size={16} color={Colors.blue} />
+            </View>
+            <View>
+              <Text style={styles.settingsTitle}>Transaction Types</Text>
+              <Text style={styles.settingsSubtitle}>Control what appears</Text>
+            </View>
+          </View>
+          {showTxSettings ? (
+            <ChevronUp size={18} color={Colors.textMuted} />
+          ) : (
+            <ChevronDown size={18} color={Colors.textMuted} />
+          )}
+        </TouchableOpacity>
+
+        {showTxSettings && (
+          <View style={styles.settingsBody}>
+            <View style={styles.fieldGroup}>
+              <View style={styles.fieldLabelRow}>
+                <Activity size={13} color={Colors.textSecondary} />
+                <Text style={styles.fieldLabel}>Transaction Density</Text>
+              </View>
+              <View style={styles.lengthPicker}>
+                {DENSITY_OPTIONS.map(opt => (
+                  <TouchableOpacity
+                    key={opt.value}
+                    style={[
+                      styles.densityOption,
+                      density === opt.value && styles.densityOptionActive,
+                    ]}
+                    onPress={() => {
+                      setDensity(opt.value);
+                      Haptics.selectionAsync();
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[
+                        styles.densityOptionLabel,
+                        density === opt.value && styles.densityOptionLabelActive,
+                      ]}
+                    >
+                      {opt.label}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.densityOptionDesc,
+                        density === opt.value && styles.densityOptionDescActive,
+                      ]}
+                    >
+                      {opt.desc}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.divider} />
+
+            {renderToggleRow(
+              'Pension Payments',
+              includePension,
+              setIncludePension,
+              <CircleDollarSign size={16} color={Colors.success} />,
+            )}
+            {renderToggleRow(
+              'ATM Withdrawals',
+              includeATM,
+              setIncludeATM,
+              <Banknote size={16} color={Colors.warning} />,
+            )}
+            {renderToggleRow(
+              'P2P Transfers',
+              includeTransfers,
+              setIncludeTransfers,
+              <ArrowUpDown size={16} color={Colors.blue} />,
+            )}
+            {renderToggleRow(
+              'Cardless Cash',
+              includeCardlessCash,
+              setIncludeCardlessCash,
+              <CreditCard size={16} color={Colors.teal} />,
+            )}
+          </View>
+        )}
+      </View>
+
+      {/* Amount Ranges */}
+      <View style={styles.settingsCard}>
+        <TouchableOpacity
+          style={styles.settingsHeader}
+          onPress={() => {
+            setShowAmountSettings(!showAmountSettings);
+            Haptics.selectionAsync();
+          }}
+          activeOpacity={0.7}
+        >
+          <View style={styles.settingsHeaderLeft}>
+            <View style={[styles.settingsIconWrap, { backgroundColor: 'rgba(52,211,153,0.15)' }]}>
+              <Settings2 size={16} color={Colors.success} />
+            </View>
+            <View>
+              <Text style={styles.settingsTitle}>Amount Ranges</Text>
+              <Text style={styles.settingsSubtitle}>Spending & incoming limits</Text>
+            </View>
+          </View>
+          {showAmountSettings ? (
+            <ChevronUp size={18} color={Colors.textMuted} />
+          ) : (
+            <ChevronDown size={18} color={Colors.textMuted} />
+          )}
+        </TouchableOpacity>
+
+        {showAmountSettings && (
+          <View style={styles.settingsBody}>
+            <View style={styles.fieldGroup}>
+              <View style={styles.fieldLabelRow}>
+                <TrendingDown size={13} color={Colors.error} />
+                <Text style={styles.fieldLabel}>Daily Spend Range</Text>
+              </View>
+              <View style={styles.fieldRow}>
+                <View style={styles.fieldHalf}>
+                  <View style={styles.currencyInputWrap}>
+                    <Text style={styles.currencyPrefix}>$</Text>
+                    <TextInput
+                      style={styles.currencyInput}
+                      value={dailySpendMin}
+                      onChangeText={setDailySpendMin}
+                      placeholder="14"
+                      placeholderTextColor={Colors.textMuted}
+                      keyboardType="decimal-pad"
+                    />
+                  </View>
+                  <Text style={styles.rangeLabel}>Min per item</Text>
+                </View>
+                <View style={styles.rangeDash}>
+                  <Text style={styles.rangeDashText}>–</Text>
+                </View>
+                <View style={styles.fieldHalf}>
+                  <View style={styles.currencyInputWrap}>
+                    <Text style={styles.currencyPrefix}>$</Text>
+                    <TextInput
+                      style={styles.currencyInput}
+                      value={dailySpendMax}
+                      onChangeText={setDailySpendMax}
+                      placeholder="154"
+                      placeholderTextColor={Colors.textMuted}
+                      keyboardType="decimal-pad"
+                    />
+                  </View>
+                  <Text style={styles.rangeLabel}>Max per item</Text>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.fieldGroup}>
+              <View style={styles.fieldLabelRow}>
+                <TrendingUp size={13} color={Colors.success} />
+                <Text style={styles.fieldLabel}>Incoming Transfer Range</Text>
+              </View>
+              <View style={styles.fieldRow}>
+                <View style={styles.fieldHalf}>
+                  <View style={styles.currencyInputWrap}>
+                    <Text style={styles.currencyPrefix}>$</Text>
+                    <TextInput
+                      style={styles.currencyInput}
+                      value={incomingTransferMin}
+                      onChangeText={setIncomingTransferMin}
+                      placeholder="50"
+                      placeholderTextColor={Colors.textMuted}
+                      keyboardType="decimal-pad"
+                    />
+                  </View>
+                  <Text style={styles.rangeLabel}>Min per transfer</Text>
+                </View>
+                <View style={styles.rangeDash}>
+                  <Text style={styles.rangeDashText}>–</Text>
+                </View>
+                <View style={styles.fieldHalf}>
+                  <View style={styles.currencyInputWrap}>
+                    <Text style={styles.currencyPrefix}>$</Text>
+                    <TextInput
+                      style={styles.currencyInput}
+                      value={incomingTransferMax}
+                      onChangeText={setIncomingTransferMax}
+                      placeholder="560"
+                      placeholderTextColor={Colors.textMuted}
+                      keyboardType="decimal-pad"
+                    />
+                  </View>
+                  <Text style={styles.rangeLabel}>Max per transfer</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
+      </View>
+
+      {/* Regenerate Button */}
+      <TouchableOpacity
+        style={[
+          styles.regenerateBtn,
+          (!parseInputToISO(startDateInput) || isRegenerating) && styles.regenerateBtnDisabled,
+        ]}
+        onPress={handleRegenerate}
+        activeOpacity={0.8}
+        disabled={!parseInputToISO(startDateInput) || isRegenerating}
+      >
+        <RefreshCw size={18} color="#fff" />
+        <Text style={styles.regenerateBtnText}>
+          {isRegenerating ? 'Regenerating...' : 'Regenerate Statement'}
+        </Text>
+      </TouchableOpacity>
 
       <View style={styles.statsGrid}>
         <View style={styles.statItem}>
@@ -526,7 +882,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   balanceItemEnd: {
-    alignItems: 'flex-end',
+    alignItems: 'flex-end' as const,
   },
   balanceArrow: {
     paddingHorizontal: 8,
@@ -680,7 +1036,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   payDateRight: {
-    alignItems: 'flex-end',
+    alignItems: 'flex-end' as const,
   },
   payDateAmount: {
     fontSize: 16,
@@ -808,7 +1164,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     borderColor: Colors.border,
-    marginBottom: 14,
+    marginBottom: 12,
     overflow: 'hidden',
   },
   settingsHeader: {
@@ -835,10 +1191,15 @@ const styles = StyleSheet.create({
     fontWeight: '700' as const,
     color: Colors.text,
   },
+  settingsSubtitle: {
+    fontSize: 11,
+    color: Colors.textMuted,
+    marginTop: 1,
+  },
   settingsBody: {
     paddingHorizontal: 16,
     paddingBottom: 16,
-    gap: 16,
+    gap: 14,
   },
   fieldGroup: {
     gap: 6,
@@ -896,20 +1257,125 @@ const styles = StyleSheet.create({
   lengthOptionTextActive: {
     color: Colors.accent,
   },
+  densityOption: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    backgroundColor: Colors.cardElevated,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+  },
+  densityOptionActive: {
+    borderColor: Colors.accent,
+    backgroundColor: Colors.accentDim,
+  },
+  densityOptionLabel: {
+    fontSize: 13,
+    fontWeight: '700' as const,
+    color: Colors.textMuted,
+  },
+  densityOptionLabelActive: {
+    color: Colors.accent,
+  },
+  densityOptionDesc: {
+    fontSize: 10,
+    color: Colors.textMuted,
+    marginTop: 2,
+    textAlign: 'center' as const,
+  },
+  densityOptionDescActive: {
+    color: Colors.accent + 'AA',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: Colors.border,
+    marginVertical: 2,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+  },
+  toggleRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  toggleRowLabel: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: Colors.text,
+  },
+  fieldRow: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'flex-start',
+  },
+  fieldHalf: {
+    flex: 1,
+  },
+  currencyInputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.inputBg,
+    borderWidth: 1,
+    borderColor: Colors.inputBorder,
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  currencyPrefix: {
+    fontSize: 15,
+    fontWeight: '600' as const,
+    color: Colors.textMuted,
+    paddingLeft: 12,
+    paddingRight: 2,
+  },
+  currencyInput: {
+    flex: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: Colors.text,
+    fontVariant: ['tabular-nums'] as const,
+  },
+  rangeDash: {
+    justifyContent: 'center',
+    paddingTop: 4,
+  },
+  rangeDashText: {
+    fontSize: 18,
+    color: Colors.textMuted,
+    fontWeight: '600' as const,
+  },
+  rangeLabel: {
+    fontSize: 10,
+    color: Colors.textMuted,
+    marginTop: 4,
+    textAlign: 'center' as const,
+  },
   regenerateBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 13,
-    borderRadius: 22,
+    gap: 10,
+    paddingVertical: 15,
+    borderRadius: 24,
     backgroundColor: Colors.accent,
+    marginBottom: 16,
+    shadowColor: Colors.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 4,
   },
   regenerateBtnDisabled: {
     opacity: 0.5,
   },
   regenerateBtnText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700' as const,
     color: '#fff',
   },

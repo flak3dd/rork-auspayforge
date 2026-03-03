@@ -180,13 +180,14 @@ export const [PayrollProvider, usePayroll] = createContextHook(() => {
     setPayslipHTMLs(htmls);
   }, [output]);
 
-  const regenerateStatement = useCallback((startDate: string, length: 30 | 60 | 90) => {
+  const regenerateStatement = useCallback((startDate: string, length: 30 | 60 | 90, bankOverrides?: Partial<BankConfig>) => {
     if (!output) return;
-    console.log('[PayrollProvider] Regenerating statement with startDate:', startDate, 'length:', length);
+    console.log('[PayrollProvider] Regenerating statement with startDate:', startDate, 'length:', length, 'overrides:', bankOverrides);
     const updatedConfig: AppConfig = {
       ...config,
       bankConfig: {
         ...config.bankConfig,
+        ...bankOverrides,
         statementStartDate: startDate,
         statementLength: length,
       },
