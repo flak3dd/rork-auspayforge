@@ -460,7 +460,7 @@ const styles = StyleSheet.create({
   bottomBar: {
     paddingHorizontal: 16,
     paddingVertical: 10,
-    paddingBottom: 4,
+    paddingBottom: 90,
   },
   exportRow: {
     flexDirection: 'row',

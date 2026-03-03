@@ -1002,6 +1002,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 12,
+    paddingBottom: 100,
   },
   emptyContainer: {
     flex: 1,
@@ -1358,7 +1359,7 @@ const styles = StyleSheet.create({
   docBottomBar: {
     paddingHorizontal: 16,
     paddingVertical: 12,
-    paddingBottom: 4,
+    paddingBottom: 90,
     flexDirection: 'row',
   },
   bottomPad: {
