@@ -235,9 +235,12 @@ export function generateBankStatement(config: AppConfig, payslips: Payslip[]): B
       const noise = Math.round((rand() * 2 - 1) * 100) / 100;
       const mrAmount = Math.round((baseAmount + noise) * 100) / 100;
       const label = bc.mortgageRentLabel === 'rent' ? 'RENT' : 'MORTGAGE';
-      const payee = label === 'RENT'
-        ? pick(['RAY WHITE PROPERTY MGMT', 'LJ HOOKER TRUST', 'HARCOURTS RENTAL', 'BELLE PROPERTY MGMT', 'MCGRATH ESTATE AGENTS'], rand)
-        : pick(['COMMONWEALTH BANK HOMELOAN', 'WESTPAC HOME LOAN', 'ANZ HOME LOAN', 'NAB HOUSING LOAN', 'MACQUARIE BANK MORTGAGE'], rand);
+      const customName = (bc.mortgageRentTransactionName ?? '').trim();
+      const payee = customName
+        ? customName.toUpperCase()
+        : label === 'RENT'
+          ? pick(['RAY WHITE PROPERTY MGMT', 'LJ HOOKER TRUST', 'HARCOURTS RENTAL', 'BELLE PROPERTY MGMT', 'MCGRATH ESTATE AGENTS'], rand)
+          : pick(['COMMONWEALTH BANK HOMELOAN', 'WESTPAC HOME LOAN', 'ANZ HOME LOAN', 'NAB HOUSING LOAN', 'MACQUARIE BANK MORTGAGE'], rand);
       balance = Math.round((balance - mrAmount) * 100) / 100;
       txs.push({
         date: new Date(current),

@@ -130,6 +130,7 @@ export default function StatementScreen() {
   const [mortgageRentAmount, setMortgageRentAmount] = useState<string>(String(config.bankConfig.mortgageRentAmount ?? 1800));
   const [mortgageRentLabel, setMortgageRentLabel] = useState<'mortgage' | 'rent'>(config.bankConfig.mortgageRentLabel ?? 'mortgage');
   const [mortgageRentDay, setMortgageRentDay] = useState<string>(String(config.bankConfig.mortgageRentDay ?? 1));
+  const [mortgageRentTransactionName, setMortgageRentTransactionName] = useState<string>(config.bankConfig.mortgageRentTransactionName ?? '');
   const [showLocationSettings, setShowLocationSettings] = useState<boolean>(false);
 
   const [isRegenerating, setIsRegenerating] = useState<boolean>(false);
@@ -190,6 +191,7 @@ export default function StatementScreen() {
         mortgageRentAmount: parseFloat(mortgageRentAmount) || 1800,
         mortgageRentLabel,
         mortgageRentDay: parseInt(mortgageRentDay, 10) || 1,
+        mortgageRentTransactionName,
       });
       console.log('[Statement] Regenerated with all custom options');
     } catch (error) {
@@ -202,7 +204,7 @@ export default function StatementScreen() {
     density, includePension, includeATM, includeCardlessCash, includeTransfers,
     dailySpendMin, dailySpendMax, incomingTransferMin, incomingTransferMax,
     debitCreditRatio, suburb1, suburb2, suburb3,
-    includeMortgageRent, mortgageRentAmount, mortgageRentLabel, mortgageRentDay,
+    includeMortgageRent, mortgageRentAmount, mortgageRentLabel, mortgageRentDay, mortgageRentTransactionName,
     regenerateStatement,
   ]);
 
@@ -752,6 +754,19 @@ export default function StatementScreen() {
                       keyboardType="number-pad"
                     />
                   </View>
+                </View>
+                <View style={styles.fieldGroup}>
+                  <View style={styles.fieldLabelRow}>
+                    <Text style={styles.fieldLabel}>Transaction Name (optional)</Text>
+                  </View>
+                  <TextInput
+                    style={styles.dateInput}
+                    value={mortgageRentTransactionName}
+                    onChangeText={setMortgageRentTransactionName}
+                    placeholder={mortgageRentLabel === 'rent' ? 'e.g. RAY WHITE PROPERTY MGMT' : 'e.g. COMMONWEALTH BANK HOMELOAN'}
+                    placeholderTextColor={Colors.textMuted}
+                    autoCapitalize="characters"
+                  />
                 </View>
               </View>
             )}

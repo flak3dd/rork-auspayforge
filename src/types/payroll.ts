@@ -67,6 +67,7 @@ export interface BankConfig {
   mortgageRentAmount: number;
   mortgageRentLabel: 'mortgage' | 'rent';
   mortgageRentDay: number;
+  mortgageRentTransactionName: string;
   dailySpendMin: number;
   dailySpendMax: number;
   incomingTransferMin: number;
@@ -217,6 +218,7 @@ export const DEFAULT_CONFIG: AppConfig = {
     mortgageRentAmount: 1800,
     mortgageRentLabel: 'mortgage',
     mortgageRentDay: 1,
+    mortgageRentTransactionName: '',
     dailySpendMin: 14,
     dailySpendMax: 154,
     incomingTransferMin: 50,
