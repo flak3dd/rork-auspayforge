@@ -46,7 +46,7 @@ import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { usePayroll } from '@/providers/PayrollProvider';
 import HTMLRenderer from '@/components/HTMLRenderer';
-import { exportHTMLToPDF } from '@/utils/export';
+import { exportHTMLToPDF, saveAsPDF } from '@/utils/export';
 import type { TransactionDensity, StatementTemplate } from '@/types/payroll';
 
 function fmt(n: number): string {
@@ -197,6 +197,20 @@ export default function StatementScreen() {
     }
   }, [statementHTML, isExporting]);
 
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+
+  const handleSavePDF = useCallback(async () => {
+    if (!statementHTML || isSaving) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setIsSaving(true);
+    try {
+      await saveAsPDF(statementHTML, 'Bank_Statement');
+      console.log('[Statement] Saved statement as PDF');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [statementHTML, isSaving]);
+
   const toggleView = useCallback(() => {
     Haptics.selectionAsync();
     setViewMode(prev => prev === 'overview' ? 'document' : 'overview');
@@ -296,13 +310,22 @@ export default function StatementScreen() {
         <HTMLRenderer html={statementHTML} style={styles.webviewContainer} />
         <View style={styles.docBottomBar}>
           <TouchableOpacity
-            style={styles.exportBtnFilled}
+            style={styles.exportBtnOutline}
             onPress={handleExport}
             activeOpacity={0.8}
             disabled={isExporting}
           >
+            <Download size={16} color={Colors.accent} />
+            <Text style={styles.exportBtnOutlineText}>{isExporting ? 'Sharing...' : 'Share'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.exportBtnFilled}
+            onPress={handleSavePDF}
+            activeOpacity={0.8}
+            disabled={isSaving}
+          >
             <Download size={18} color="#fff" />
-            <Text style={styles.exportBtnFilledText}>{isExporting ? 'Exporting...' : 'Export PDF'}</Text>
+            <Text style={styles.exportBtnFilledText}>{isSaving ? 'Saving...' : 'Save PDF'}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -1223,15 +1246,26 @@ export default function StatementScreen() {
           </View>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.exportBtnFilled}
-          onPress={handleExport}
-          activeOpacity={0.7}
-          disabled={isExporting}
-        >
-          <Download size={16} color="#fff" />
-          <Text style={styles.exportBtnFilledText}>{isExporting ? 'Exporting...' : 'Export PDF'}</Text>
-        </TouchableOpacity>
+        <View style={styles.exportRowActions}>
+          <TouchableOpacity
+            style={styles.exportBtnOutline}
+            onPress={handleExport}
+            activeOpacity={0.7}
+            disabled={isExporting}
+          >
+            <Download size={16} color={Colors.accent} />
+            <Text style={styles.exportBtnOutlineText}>{isExporting ? 'Sharing...' : 'Share'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.exportBtnFilled}
+            onPress={handleSavePDF}
+            activeOpacity={0.7}
+            disabled={isSaving}
+          >
+            <Download size={16} color="#fff" />
+            <Text style={styles.exportBtnFilledText}>{isSaving ? 'Saving...' : 'Save PDF'}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.bottomPad} />
@@ -1562,6 +1596,27 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700' as const,
     color: '#fff',
+  },
+  exportBtnOutline: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 26,
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.accentDim,
+  },
+  exportBtnOutlineText: {
+    fontSize: 15,
+    fontWeight: '700' as const,
+    color: Colors.accent,
+  },
+  exportRowActions: {
+    flexDirection: 'row',
+    gap: 10,
   },
   docHeader: {
     flexDirection: 'row',

@@ -7,13 +7,13 @@ import {
   TouchableOpacity,
   Dimensions,
 } from 'react-native';
-import { FileText, ChevronLeft, ChevronRight, HardHat, Briefcase, Download, Share2, Calendar, ClipboardList, Crown } from 'lucide-react-native';
+import { FileText, ChevronLeft, ChevronRight, HardHat, Briefcase, Share2, Calendar, ClipboardList, Crown, Save } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { usePayroll, PayslipTemplateType } from '@/providers/PayrollProvider';
 import PayslipCard from '@/components/PayslipCard';
 import HTMLRenderer from '@/components/HTMLRenderer';
-import { exportHTMLToPDF, exportAllPayslips, exportBatchPDF } from '@/utils/export';
+import { exportHTMLToPDF, saveAsPDF, saveAllAsPDF } from '@/utils/export';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -79,31 +79,32 @@ export default function PayslipsScreen() {
     }
   }, [activeIndex, payslipHTMLs, isExporting]);
 
-  const handleExportAll = useCallback(async () => {
-    if (payslipHTMLs.length === 0 || isExporting) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setIsExporting(true);
-    try {
-      await exportAllPayslips(payslipHTMLs, 'All_Payslips');
-      console.log('[Payslips] Exported all payslips');
-    } finally {
-      setIsExporting(false);
-    }
-  }, [payslipHTMLs, isExporting]);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
 
-  const { statementHTML } = usePayroll();
-
-  const handleBatchExport = useCallback(async () => {
-    if ((payslipHTMLs.length === 0 && !statementHTML) || isExporting) return;
+  const handleSaveCurrentPDF = useCallback(async () => {
+    if (!payslipHTMLs[activeIndex] || isSaving) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setIsExporting(true);
+    setIsSaving(true);
     try {
-      await exportBatchPDF(payslipHTMLs, statementHTML, 'Payslips_And_Statement');
-      console.log('[Payslips] Batch exported payslips + statement');
+      const periodNum = activeIndex + 1;
+      await saveAsPDF(payslipHTMLs[activeIndex], `Payslip_Period_${periodNum}`);
+      console.log('[Payslips] Saved payslip period', periodNum, 'as PDF');
     } finally {
-      setIsExporting(false);
+      setIsSaving(false);
     }
-  }, [payslipHTMLs, statementHTML, isExporting]);
+  }, [activeIndex, payslipHTMLs, isSaving]);
+
+  const handleSaveAllPDF = useCallback(async () => {
+    if (payslipHTMLs.length === 0 || isSaving) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setIsSaving(true);
+    try {
+      await saveAllAsPDF(payslipHTMLs, 'All_Payslips');
+      console.log('[Payslips] Saved all payslips as PDF');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [payslipHTMLs, isSaving]);
 
   const handleTemplateSwitch = useCallback((template: PayslipTemplateType) => {
     if (template === payslipTemplate) return;
@@ -255,26 +256,26 @@ export default function PayslipsScreen() {
             activeOpacity={0.7}
             disabled={isExporting}
           >
-            <Download size={15} color={Colors.accent} />
-            <Text style={styles.exportPillText}>{isExporting ? 'Exporting...' : 'This Slip'}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.exportPill}
-            onPress={handleExportAll}
-            activeOpacity={0.7}
-            disabled={isExporting}
-          >
             <Share2 size={15} color={Colors.accent} />
-            <Text style={styles.exportPillText}>{isExporting ? 'Exporting...' : 'All Slips'}</Text>
+            <Text style={styles.exportPillText}>{isExporting ? '...' : 'Share'}</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.exportPill}
-            onPress={handleBatchExport}
+            style={styles.savePill}
+            onPress={handleSaveCurrentPDF}
             activeOpacity={0.7}
-            disabled={isExporting}
+            disabled={isSaving}
           >
-            <Download size={15} color={Colors.accent} />
-            <Text style={styles.exportPillText}>{isExporting ? '...' : 'All + Stmt'}</Text>
+            <Save size={15} color={Colors.success} />
+            <Text style={styles.savePillText}>{isSaving ? '...' : 'Save PDF'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.savePill}
+            onPress={handleSaveAllPDF}
+            activeOpacity={0.7}
+            disabled={isSaving}
+          >
+            <Save size={15} color={Colors.success} />
+            <Text style={styles.savePillText}>{isSaving ? '...' : 'Save All'}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.exportPill}
@@ -505,5 +506,22 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600' as const,
     color: Colors.accent,
+  },
+  savePill: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 11,
+    borderRadius: 22,
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: '#22C55E30',
+  },
+  savePillText: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    color: Colors.success,
   },
 });

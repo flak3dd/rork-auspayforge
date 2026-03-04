@@ -2,31 +2,94 @@ import { Platform, Alert } from 'react-native';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 
-export async function exportHTMLToPDF(html: string, filename: string): Promise<void> {
-  console.log('[Export] Starting export for:', filename);
+async function generatePDFUri(html: string): Promise<string> {
+  const { uri } = await Print.printToFileAsync({
+    html,
+    width: 595,
+    height: 842,
+  });
+  return uri;
+}
+
+function webDownloadPDF(html: string, filename: string): void {
+  console.log('[Export] Web platform — triggering download via print dialog');
+  const printWindow = window.open('', '_blank');
+  if (printWindow) {
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html><head><title>${filename}</title></head><body>
+      ${html}
+      <script>window.onload=function(){document.title='${filename}.pdf';window.print();}<\/script>
+      </body></html>
+    `);
+    printWindow.document.close();
+  } else {
+    Alert.alert('Export Failed', 'Unable to open print window. Please allow popups.');
+  }
+}
+
+export async function saveAsPDF(html: string, filename: string): Promise<void> {
+  console.log('[Export] Save as PDF for:', filename);
 
   if (Platform.OS === 'web') {
-    console.log('[Export] Web platform — opening print dialog');
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(html);
-      printWindow.document.close();
-      printWindow.focus();
-      setTimeout(() => {
-        printWindow.print();
-      }, 500);
-    } else {
-      Alert.alert('Export Failed', 'Unable to open print window. Please allow popups.');
-    }
+    webDownloadPDF(html, filename);
     return;
   }
 
   try {
-    const { uri } = await Print.printToFileAsync({
-      html,
-      width: 595,
-      height: 842,
-    });
+    const uri = await generatePDFUri(html);
+    console.log('[Export] PDF generated at:', uri);
+
+    const fs = await import('expo-file-system');
+    const safeName = filename.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const destFile = new fs.File(fs.Paths.document, `${safeName}.pdf`);
+
+    const srcFile = new fs.File(uri);
+    srcFile.copy(destFile);
+    console.log('[Export] PDF saved to documents:', destFile.uri);
+
+    Alert.alert(
+      'PDF Saved',
+      `${safeName}.pdf has been saved to your documents.`,
+      [
+        { text: 'OK', style: 'default' },
+        {
+          text: 'Share',
+          onPress: async () => {
+            try {
+              const canShare = await Sharing.isAvailableAsync();
+              if (canShare) {
+                await Sharing.shareAsync(destFile.uri, {
+                  UTI: '.pdf',
+                  mimeType: 'application/pdf',
+                  dialogTitle: `Share ${safeName}.pdf`,
+                });
+              }
+            } catch (e: any) {
+              if (!e?.message?.includes('cancel')) {
+                console.error('[Export] Share error:', e);
+              }
+            }
+          },
+        },
+      ]
+    );
+  } catch (error: any) {
+    console.error('[Export] Save as PDF error:', error);
+    Alert.alert('Save Error', 'Failed to save PDF. Please try again.');
+  }
+}
+
+export async function exportHTMLToPDF(html: string, filename: string): Promise<void> {
+  console.log('[Export] Starting export for:', filename);
+
+  if (Platform.OS === 'web') {
+    webDownloadPDF(html, filename);
+    return;
+  }
+
+  try {
+    const uri = await generatePDFUri(html);
     console.log('[Export] PDF saved to:', uri);
 
     const canShare = await Sharing.isAvailableAsync();
@@ -47,6 +110,37 @@ export async function exportHTMLToPDF(html: string, filename: string): Promise<v
     }
     Alert.alert('Export Error', 'Failed to generate PDF. Please try again.');
   }
+}
+
+export async function saveAllAsPDF(htmls: string[], filename: string): Promise<void> {
+  console.log('[Export] Save all as PDF, count:', htmls.length);
+  if (htmls.length === 0) return;
+
+  const combinedHTML = buildCombinedHTML(htmls);
+  await saveAsPDF(combinedHTML, filename);
+}
+
+function buildCombinedHTML(htmls: string[]): string {
+  if (htmls.length === 1) return htmls[0];
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+@page { margin: 0; }
+.page-break { page-break-before: always; }
+</style>
+</head>
+<body>
+${htmls.map((h, i) => {
+    const bodyMatch = h.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+    const content = bodyMatch ? bodyMatch[1] : h;
+    const styleMatch = h.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
+    const styles = styleMatch ? `<style>${styleMatch[1]}</style>` : '';
+    return `${i > 0 ? '<div class="page-break"></div>' : ''}${styles}${content}`;
+  }).join('\n')}
+</body>
+</html>`;
 }
 
 export async function exportBatchPDF(payslipHTMLs: string[], statementHTML: string, filename: string): Promise<void> {
