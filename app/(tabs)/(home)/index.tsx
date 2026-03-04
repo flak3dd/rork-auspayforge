@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   TextInput,
   Platform,
+  Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -27,12 +28,17 @@ import {
   DollarSign,
   TrendingDown,
   Wallet,
+  Settings2,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { TEMPLATES, PayrollTemplate } from '@/mocks/templates';
 import TemplateCard from '@/components/TemplateCard';
 import { usePayroll } from '@/providers/PayrollProvider';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const isSmall = SCREEN_WIDTH < 375;
+const SIDE_PAD = isSmall ? 14 : 18;
 
 type StatementLength = 30 | 60 | 90;
 
@@ -124,18 +130,18 @@ export default function HomeScreen() {
       showsVerticalScrollIndicator={false}
     >
       <LinearGradient
-        colors={['#0D1525', '#0F1B30', '#0A0E1A']}
+        colors={['#0D1525', '#111D35', '#0A0E1A']}
         style={styles.heroBg}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
         <View style={styles.hero}>
           <View style={styles.heroIconWrap}>
-            <Zap size={26} color={Colors.accent} />
+            <Zap size={28} color={Colors.accent} />
           </View>
           <Text style={styles.heroTitle}>AusPayForge</Text>
           <Text style={styles.heroSubtitle}>
-            Generate realistic Australian payslips and bank statements
+            Generate realistic Australian payslips{'\n'}and bank statements
           </Text>
         </View>
       </LinearGradient>
@@ -144,7 +150,7 @@ export default function HomeScreen() {
         <View style={styles.statCard}>
           <View style={[styles.statAccent, { backgroundColor: Colors.accent }]} />
           <View style={styles.statContent}>
-            <Sparkles size={15} color={Colors.accent} />
+            <Sparkles size={16} color={Colors.accent} />
             <Text style={styles.statValue}>{TEMPLATES.length}</Text>
             <Text style={styles.statLabel}>Templates</Text>
           </View>
@@ -152,7 +158,7 @@ export default function HomeScreen() {
         <View style={styles.statCard}>
           <View style={[styles.statAccent, { backgroundColor: Colors.success }]} />
           <View style={styles.statContent}>
-            <Shield size={15} color={Colors.success} />
+            <Shield size={16} color={Colors.success} />
             <Text style={styles.statValue}>100%</Text>
             <Text style={styles.statLabel}>Offline</Text>
           </View>
@@ -160,7 +166,7 @@ export default function HomeScreen() {
         <View style={styles.statCard}>
           <View style={[styles.statAccent, { backgroundColor: Colors.gold }]} />
           <View style={styles.statContent}>
-            <Zap size={15} color={Colors.gold} />
+            <Zap size={16} color={Colors.gold} />
             <Text style={styles.statValue}>{config.payConfig.numberOfPayslips ?? 4}</Text>
             <Text style={styles.statLabel}>Periods</Text>
           </View>
@@ -168,7 +174,10 @@ export default function HomeScreen() {
       </View>
 
       <View style={styles.templatesSection}>
-        <Text style={styles.sectionTitle}>CHOOSE A TEMPLATE</Text>
+        <View style={styles.sectionHeader}>
+          <View style={[styles.sectionDot, { backgroundColor: Colors.accent }]} />
+          <Text style={styles.sectionTitle}>CHOOSE A TEMPLATE</Text>
+        </View>
         <Text style={styles.sectionSub}>
           Select a preset to auto-fill all payroll fields
         </Text>
@@ -190,6 +199,7 @@ export default function HomeScreen() {
         onPress={handleCustomize}
         activeOpacity={0.7}
       >
+        <Settings2 size={15} color={Colors.textMuted} />
         <Text style={styles.blankButtonText}>Start from scratch</Text>
         <ChevronRight size={16} color={Colors.textMuted} />
       </TouchableOpacity>
@@ -203,7 +213,7 @@ export default function HomeScreen() {
             <View style={styles.forgeCardInner}>
               <View style={styles.forgeCardHeader}>
                 <View style={[styles.forgeCardIconWrap, { backgroundColor: Colors.accentDim }]}>
-                  <FileText size={20} color={Colors.accent} />
+                  <FileText size={22} color={Colors.accent} />
                 </View>
                 <View style={styles.forgeCardHeaderText}>
                   <Text style={styles.forgeCardTitle}>Payslips</Text>
@@ -258,11 +268,11 @@ export default function HomeScreen() {
             <View style={styles.forgeCardInner}>
               <View style={styles.forgeCardHeader}>
                 <View style={[styles.forgeCardIconWrap, { backgroundColor: Colors.goldDim }]}>
-                  <Landmark size={20} color={Colors.gold} />
+                  <Landmark size={22} color={Colors.gold} />
                 </View>
                 <View style={styles.forgeCardHeaderText}>
                   <Text style={styles.forgeCardTitle}>Bank Statement</Text>
-                  <Text style={styles.forgeCardDesc}>CommBank-style statement with transactions</Text>
+                  <Text style={styles.forgeCardDesc}>Statement with mapped transactions</Text>
                 </View>
               </View>
 
@@ -432,55 +442,55 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   content: {
-    paddingBottom: 20,
+    paddingBottom: 24,
   },
   heroBg: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 20,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    marginBottom: 16,
+    paddingHorizontal: SIDE_PAD,
+    paddingTop: 6,
+    paddingBottom: 24,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    marginBottom: 18,
   },
   hero: {
     alignItems: 'center',
-    paddingVertical: 20,
+    paddingVertical: 24,
   },
   heroIconWrap: {
-    width: 58,
-    height: 58,
-    borderRadius: 18,
+    width: 62,
+    height: 62,
+    borderRadius: 20,
     backgroundColor: 'rgba(34,211,197,0.12)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 14,
+    marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(34,211,197,0.2)',
+    borderColor: 'rgba(34,211,197,0.22)',
   },
   heroTitle: {
-    fontSize: 30,
+    fontSize: isSmall ? 26 : 32,
     fontWeight: '800' as const,
     color: Colors.text,
-    letterSpacing: -0.8,
+    letterSpacing: -1,
   },
   heroSubtitle: {
-    fontSize: 14,
+    fontSize: isSmall ? 13 : 14,
     color: Colors.textSecondary,
     textAlign: 'center',
-    marginTop: 6,
-    lineHeight: 20,
-    paddingHorizontal: 20,
+    marginTop: 8,
+    lineHeight: 21,
+    paddingHorizontal: 16,
   },
   statsRow: {
     flexDirection: 'row',
-    gap: 10,
-    marginBottom: 20,
-    paddingHorizontal: 16,
+    gap: isSmall ? 8 : 10,
+    marginBottom: 22,
+    paddingHorizontal: SIDE_PAD,
   },
   statCard: {
     flex: 1,
     backgroundColor: Colors.card,
-    borderRadius: 14,
+    borderRadius: 16,
     overflow: 'hidden',
     flexDirection: 'row',
     borderWidth: 1,
@@ -491,61 +501,73 @@ const styles = StyleSheet.create({
   },
   statContent: {
     flex: 1,
-    padding: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 8,
     alignItems: 'center',
     gap: 4,
   },
   statValue: {
-    fontSize: 20,
+    fontSize: isSmall ? 18 : 21,
     fontWeight: '800' as const,
     color: Colors.text,
   },
   statLabel: {
-    fontSize: 10,
+    fontSize: isSmall ? 9 : 10,
     color: Colors.textMuted,
     fontWeight: '600' as const,
     textTransform: 'uppercase' as const,
     letterSpacing: 0.5,
   },
   templatesSection: {
-    marginBottom: 16,
-    paddingHorizontal: 16,
+    marginBottom: 18,
+    paddingHorizontal: SIDE_PAD,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  sectionDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   sectionTitle: {
     fontSize: 12,
     fontWeight: '700' as const,
     color: Colors.accent,
     letterSpacing: 1.2,
-    marginBottom: 4,
   },
   sectionSub: {
     fontSize: 13,
     color: Colors.textMuted,
-    marginBottom: 14,
+    marginBottom: 16,
+    marginLeft: 14,
   },
   templateWrap: {
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 2,
     borderColor: 'transparent',
     marginBottom: 2,
   },
   templateSelected: {
     borderColor: Colors.accent,
-    borderRadius: 16,
+    borderRadius: 18,
   },
   blankButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: Colors.card,
-    borderRadius: 12,
-    paddingVertical: 14,
+    borderRadius: 14,
+    paddingVertical: 15,
     borderWidth: 1,
     borderColor: Colors.border,
     borderStyle: 'dashed',
-    gap: 6,
-    marginBottom: 8,
-    marginHorizontal: 16,
+    gap: 8,
+    marginBottom: 10,
+    marginHorizontal: SIDE_PAD,
   },
   blankButtonText: {
     fontSize: 14,
@@ -553,40 +575,41 @@ const styles = StyleSheet.create({
     fontWeight: '600' as const,
   },
   forgeArea: {
-    marginTop: 8,
+    marginTop: 10,
     gap: 14,
-    paddingHorizontal: 16,
+    paddingHorizontal: SIDE_PAD,
   },
   forgeDivider: {
     height: 1,
     backgroundColor: Colors.border,
-    marginVertical: 4,
+    marginVertical: 6,
+    marginHorizontal: 20,
   },
   forgeCard: {
     backgroundColor: Colors.card,
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: Colors.border,
     flexDirection: 'row',
     overflow: 'hidden',
   },
   forgeCardEdge: {
-    width: 4,
+    width: 5,
   },
   forgeCardInner: {
     flex: 1,
-    padding: 16,
-    gap: 12,
+    padding: 18,
+    gap: 14,
   },
   forgeCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 14,
   },
   forgeCardIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 13,
+    width: 48,
+    height: 48,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -594,7 +617,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   forgeCardTitle: {
-    fontSize: 18,
+    fontSize: isSmall ? 17 : 19,
     fontWeight: '800' as const,
     color: Colors.text,
     letterSpacing: -0.3,
@@ -602,16 +625,17 @@ const styles = StyleSheet.create({
   forgeCardDesc: {
     fontSize: 13,
     color: Colors.textSecondary,
-    marginTop: 2,
+    marginTop: 3,
+    lineHeight: 18,
   },
   viewExistingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.cardElevated,
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    gap: 8,
+    borderRadius: 12,
+    paddingVertical: 11,
+    paddingHorizontal: 14,
+    gap: 10,
   },
   viewExistingText: {
     fontSize: 13,
@@ -624,7 +648,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
-    paddingVertical: 2,
+    paddingVertical: 4,
   },
   customizeText: {
     fontSize: 13,
@@ -636,9 +660,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: Colors.cardElevated,
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    borderRadius: 12,
+    paddingVertical: 11,
+    paddingHorizontal: 14,
   },
   configToggleLeft: {
     flexDirection: 'row',
@@ -651,15 +675,15 @@ const styles = StyleSheet.create({
     fontWeight: '600' as const,
   },
   configBody: {
-    gap: 12,
-    paddingTop: 2,
+    gap: 14,
+    paddingTop: 4,
   },
   configField: {
-    gap: 6,
+    gap: 7,
   },
   configFieldRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 12,
   },
   configFieldLabelRow: {
     flexDirection: 'row',
@@ -677,17 +701,17 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.inputBg,
     borderWidth: 1,
     borderColor: Colors.inputBorder,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
     color: Colors.text,
     fontVariant: ['tabular-nums'] as const,
   },
   configFieldHint: {
     fontSize: 11,
     color: Colors.textMuted,
-    lineHeight: 15,
+    lineHeight: 16,
   },
   lengthPicker: {
     flexDirection: 'row',
@@ -695,8 +719,8 @@ const styles = StyleSheet.create({
   },
   lengthOption: {
     flex: 1,
-    paddingVertical: 10,
-    borderRadius: 10,
+    paddingVertical: 11,
+    borderRadius: 12,
     backgroundColor: Colors.inputBg,
     alignItems: 'center',
     borderWidth: 1.5,
@@ -716,17 +740,17 @@ const styles = StyleSheet.create({
   },
   forgeButton: {
     backgroundColor: Colors.accent,
-    borderRadius: 26,
-    paddingVertical: 15,
+    borderRadius: 28,
+    paddingVertical: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 10,
     shadowColor: Colors.accent,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
+    elevation: 8,
   },
   forgeButtonGold: {
     backgroundColor: Colors.gold,
@@ -742,6 +766,6 @@ const styles = StyleSheet.create({
     color: '#0A0E1A',
   },
   bottomPad: {
-    height: 90,
+    height: 100,
   },
 });

@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, useState } from 'react';
+import React, { useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,8 +7,8 @@ import {
   TouchableOpacity,
   Alert,
   Animated,
-  TextInput,
   Switch,
+  Dimensions,
 } from 'react-native';
 import {
   Info,
@@ -24,6 +24,10 @@ import {
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { usePayroll } from '@/providers/PayrollProvider';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const isSmall = SCREEN_WIDTH < 375;
+const SIDE_PAD = isSmall ? 14 : 18;
 
 function SettingRow({
   icon,
@@ -168,7 +172,7 @@ export default function SettingsScreen() {
       <View style={styles.section}>
         <View style={styles.sectionTitleRow}>
           <View style={[styles.sectionAccent, { backgroundColor: Colors.blue }]} />
-          <Text style={styles.sectionTitle}>INFORMATION</Text>
+          <Text style={[styles.sectionTitle, { color: Colors.blue }]}>INFORMATION</Text>
         </View>
         <SettingRow
           icon={<HelpCircle size={18} color={Colors.blue} />}
@@ -202,7 +206,7 @@ export default function SettingsScreen() {
 
       <View style={styles.footer}>
         <View style={styles.footerLogoWrap}>
-          <Zap size={20} color={Colors.accent} />
+          <Zap size={22} color={Colors.accent} />
         </View>
         <Text style={styles.footerText}>AusPayForge</Text>
         <Text style={styles.footerSub}>Simulation tool for Australian payroll documents</Text>
@@ -218,24 +222,24 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   content: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 90,
+    paddingHorizontal: SIDE_PAD,
+    paddingTop: 14,
+    paddingBottom: 100,
   },
   section: {
-    marginBottom: 24,
+    marginBottom: 26,
   },
   sectionTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 10,
+    marginBottom: 12,
     paddingHorizontal: 4,
   },
   sectionAccent: {
-    width: 3,
-    height: 14,
-    borderRadius: 1.5,
+    width: 4,
+    height: 16,
+    borderRadius: 2,
   },
   sectionTitle: {
     fontSize: 12,
@@ -247,17 +251,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.card,
-    borderRadius: 14,
-    padding: 14,
+    borderRadius: 16,
+    padding: 16,
     marginBottom: 8,
     borderWidth: 1,
     borderColor: Colors.border,
-    gap: 12,
+    gap: 14,
   },
   rowIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 11,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     backgroundColor: Colors.cardElevated,
     alignItems: 'center',
     justifyContent: 'center',
@@ -279,21 +283,22 @@ const styles = StyleSheet.create({
   rowValue: {
     fontSize: 13,
     color: Colors.textSecondary,
-    marginTop: 1,
+    marginTop: 2,
+    lineHeight: 18,
   },
   footer: {
     alignItems: 'center',
-    paddingVertical: 30,
-    gap: 4,
+    paddingVertical: 34,
+    gap: 5,
   },
   footerLogoWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     backgroundColor: Colors.accentDim,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   footerText: {
     fontSize: 16,
@@ -303,5 +308,6 @@ const styles = StyleSheet.create({
   footerSub: {
     fontSize: 12,
     color: Colors.textMuted,
+    lineHeight: 17,
   },
 });

@@ -16,6 +16,9 @@ import HTMLRenderer from '@/components/HTMLRenderer';
 import { exportHTMLToPDF, saveAsPDF, saveAllAsPDF } from '@/utils/export';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const isSmall = SCREEN_WIDTH < 375;
+const SIDE_PAD = isSmall ? 14 : 18;
+const CARD_WIDTH = SCREEN_WIDTH - SIDE_PAD * 2;
 
 type TemplateOption = {
   key: PayslipTemplateType;
@@ -50,7 +53,7 @@ export default function PayslipsScreen() {
     if (activeIndex > 0) {
       const newIndex = activeIndex - 1;
       setActiveIndex(newIndex);
-      scrollRef.current?.scrollTo({ x: newIndex * (SCREEN_WIDTH - 32), animated: true });
+      scrollRef.current?.scrollTo({ x: newIndex * CARD_WIDTH, animated: true });
       Haptics.selectionAsync();
     }
   }, [activeIndex]);
@@ -59,7 +62,7 @@ export default function PayslipsScreen() {
     if (output && activeIndex < output.payslips.length - 1) {
       const newIndex = activeIndex + 1;
       setActiveIndex(newIndex);
-      scrollRef.current?.scrollTo({ x: newIndex * (SCREEN_WIDTH - 32), animated: true });
+      scrollRef.current?.scrollTo({ x: newIndex * CARD_WIDTH, animated: true });
       Haptics.selectionAsync();
     }
   }, [activeIndex, output]);
@@ -77,7 +80,7 @@ export default function PayslipsScreen() {
     } finally {
       setIsExporting(false);
     }
-  }, [activeIndex, payslipHTMLs, isExporting]);
+  }, [activeIndex, payslipHTMLs, isExporting, metadataCleanEnabled]);
 
   const [isSaving, setIsSaving] = useState<boolean>(false);
 
@@ -92,7 +95,7 @@ export default function PayslipsScreen() {
     } finally {
       setIsSaving(false);
     }
-  }, [activeIndex, payslipHTMLs, isSaving]);
+  }, [activeIndex, payslipHTMLs, isSaving, metadataCleanEnabled]);
 
   const handleSaveAllPDF = useCallback(async () => {
     if (payslipHTMLs.length === 0 || isSaving) return;
@@ -104,7 +107,7 @@ export default function PayslipsScreen() {
     } finally {
       setIsSaving(false);
     }
-  }, [payslipHTMLs, isSaving]);
+  }, [payslipHTMLs, isSaving, metadataCleanEnabled]);
 
   const handleTemplateSwitch = useCallback((template: PayslipTemplateType) => {
     if (template === payslipTemplate) return;
@@ -120,7 +123,7 @@ export default function PayslipsScreen() {
 
   const handleScroll = useCallback((e: { nativeEvent: { contentOffset: { x: number } } }) => {
     const offsetX = e.nativeEvent.contentOffset.x;
-    const idx = Math.round(offsetX / (SCREEN_WIDTH - 32));
+    const idx = Math.round(offsetX / CARD_WIDTH);
     if (idx !== activeIndex && idx >= 0) {
       setActiveIndex(idx);
     }
@@ -130,7 +133,7 @@ export default function PayslipsScreen() {
     return (
       <View style={styles.emptyContainer}>
         <View style={styles.emptyIcon}>
-          <FileText size={40} color={Colors.textMuted} />
+          <FileText size={42} color={Colors.textMuted} />
         </View>
         <Text style={styles.emptyTitle}>No Payslips Generated</Text>
         <Text style={styles.emptySubtitle}>
@@ -229,10 +232,10 @@ export default function PayslipsScreen() {
             onMomentumScrollEnd={handleScroll}
             contentContainerStyle={styles.carousel}
             decelerationRate="fast"
-            snapToInterval={SCREEN_WIDTH - 32}
+            snapToInterval={CARD_WIDTH}
           >
             {output.payslips.map((ps, i) => (
-              <View key={i} style={[styles.cardWrap, { width: SCREEN_WIDTH - 32 }]}>
+              <View key={i} style={[styles.cardWrap, { width: CARD_WIDTH }]}>
                 <PayslipCard payslip={ps} index={i} />
               </View>
             ))}
@@ -266,7 +269,7 @@ export default function PayslipsScreen() {
             disabled={isSaving}
           >
             <Save size={15} color={Colors.success} />
-            <Text style={styles.savePillText}>{isSaving ? '...' : 'Save PDF'}</Text>
+            <Text style={styles.savePillText}>{isSaving ? '...' : 'Save'}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.savePill}
@@ -275,7 +278,7 @@ export default function PayslipsScreen() {
             disabled={isSaving}
           >
             <Save size={15} color={Colors.success} />
-            <Text style={styles.savePillText}>{isSaving ? '...' : 'Save All'}</Text>
+            <Text style={styles.savePillText}>{isSaving ? '...' : 'All'}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.exportPill}
@@ -301,56 +304,56 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 40,
+    paddingHorizontal: 44,
   },
   emptyIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 24,
+    width: 86,
+    height: 86,
+    borderRadius: 26,
     backgroundColor: Colors.card,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    marginBottom: 22,
     borderWidth: 1,
     borderColor: Colors.border,
   },
   emptyTitle: {
-    fontSize: 20,
+    fontSize: 21,
     fontWeight: '700' as const,
     color: Colors.text,
-    marginBottom: 8,
+    marginBottom: 10,
   },
   emptySubtitle: {
     fontSize: 14,
     color: Colors.textMuted,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 21,
   },
   segmentedBar: {
-    paddingTop: 10,
-    paddingBottom: 4,
-    maxHeight: 52,
+    paddingTop: 12,
+    paddingBottom: 6,
+    maxHeight: 56,
   },
   segmentedScroll: {
-    paddingHorizontal: 16,
+    paddingHorizontal: SIDE_PAD,
   },
   segmentedInner: {
     flexDirection: 'row',
     backgroundColor: Colors.card,
-    borderRadius: 12,
-    padding: 3,
+    borderRadius: 14,
+    padding: 4,
     borderWidth: 1,
     borderColor: Colors.border,
-    gap: 2,
+    gap: 3,
   },
   segmentBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 5,
-    paddingVertical: 9,
-    paddingHorizontal: 14,
-    borderRadius: 10,
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 11,
   },
   segmentBtnText: {
     fontSize: 12,
@@ -359,10 +362,10 @@ const styles = StyleSheet.create({
   },
   paymentInfo: {
     flexDirection: 'row',
-    marginHorizontal: 16,
+    marginHorizontal: SIDE_PAD,
     marginTop: 10,
     backgroundColor: Colors.card,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: Colors.border,
     overflow: 'hidden',
@@ -375,15 +378,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
   },
   paymentInfoLeft: {
-    gap: 4,
+    gap: 5,
   },
   paymentDateBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 7,
   },
   paymentDateText: {
     fontSize: 13,
@@ -393,7 +397,7 @@ const styles = StyleSheet.create({
   paidOnText: {
     fontSize: 11,
     color: Colors.textSecondary,
-    marginLeft: 19,
+    marginLeft: 20,
   },
   paymentInfoRight: {
     alignItems: 'flex-end',
@@ -406,7 +410,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
   },
   netPayAmount: {
-    fontSize: 20,
+    fontSize: isSmall ? 18 : 21,
     fontWeight: '800' as const,
     color: Colors.success,
     fontVariant: ['tabular-nums'] as const,
@@ -415,13 +419,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: SIDE_PAD,
+    paddingVertical: 12,
   },
   navButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     backgroundColor: Colors.card,
     alignItems: 'center',
     justifyContent: 'center',
@@ -429,13 +433,13 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
   },
   navButtonDisabled: {
-    opacity: 0.4,
+    opacity: 0.35,
   },
   navCenter: {
     flex: 1,
     alignItems: 'center',
-    paddingHorizontal: 16,
-    gap: 6,
+    paddingHorizontal: 18,
+    gap: 7,
   },
   navTitle: {
     fontSize: 15,
@@ -459,15 +463,16 @@ const styles = StyleSheet.create({
     minHeight: 0,
   },
   carousel: {
-    paddingHorizontal: 16,
+    paddingHorizontal: SIDE_PAD,
   },
   cardWrap: {
     paddingRight: 0,
   },
   htmlContainer: {
     flex: 1,
-    margin: 8,
-    borderRadius: 10,
+    marginHorizontal: SIDE_PAD,
+    marginVertical: 8,
+    borderRadius: 12,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: Colors.border,
@@ -482,9 +487,9 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
   },
   bottomBar: {
-    paddingHorizontal: 16,
+    paddingHorizontal: SIDE_PAD,
     paddingVertical: 10,
-    paddingBottom: 90,
+    paddingBottom: 94,
   },
   exportRow: {
     flexDirection: 'row',
@@ -496,8 +501,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 11,
-    borderRadius: 22,
+    paddingVertical: 12,
+    borderRadius: 24,
     backgroundColor: Colors.card,
     borderWidth: 1,
     borderColor: Colors.accentDim,
@@ -513,8 +518,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 11,
-    borderRadius: 22,
+    paddingVertical: 12,
+    borderRadius: 24,
     backgroundColor: Colors.card,
     borderWidth: 1,
     borderColor: '#22C55E30',

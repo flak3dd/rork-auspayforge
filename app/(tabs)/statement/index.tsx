@@ -11,6 +11,7 @@ import {
   Switch,
   PanResponder,
   LayoutChangeEvent,
+  Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
@@ -36,8 +37,6 @@ import {
   CircleDollarSign,
   ArrowUpDown,
   Layers,
-  Eye,
-  EyeOff,
   MapPin,
   Building2,
   FileStack,
@@ -48,6 +47,10 @@ import { usePayroll } from '@/providers/PayrollProvider';
 import HTMLRenderer from '@/components/HTMLRenderer';
 import { exportHTMLToPDF, saveAsPDF } from '@/utils/export';
 import type { TransactionDensity, StatementTemplate } from '@/types/payroll';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const isSmall = SCREEN_WIDTH < 375;
+const SIDE_PAD = isSmall ? 14 : 18;
 
 function fmt(n: number): string {
   return Math.abs(n).toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -195,7 +198,7 @@ export default function StatementScreen() {
     } finally {
       setIsExporting(false);
     }
-  }, [statementHTML, isExporting]);
+  }, [statementHTML, isExporting, metadataCleanEnabled]);
 
   const [isSaving, setIsSaving] = useState<boolean>(false);
 
@@ -209,7 +212,7 @@ export default function StatementScreen() {
     } finally {
       setIsSaving(false);
     }
-  }, [statementHTML, isSaving]);
+  }, [statementHTML, isSaving, metadataCleanEnabled]);
 
   const toggleView = useCallback(() => {
     Haptics.selectionAsync();
@@ -258,7 +261,7 @@ export default function StatementScreen() {
     dailySpendMin, dailySpendMax, incomingTransferMin, incomingTransferMax,
     debitCreditRatio, suburb1, suburb2, suburb3,
     includeMortgageRent, mortgageRentAmount, mortgageRentLabel, mortgageRentDay, mortgageRentTransactionName,
-    regenerateStatement,
+    regenerateStatement, statementTemplate,
   ]);
 
   handleRegenerateRef.current = handleRegenerate;
@@ -286,7 +289,7 @@ export default function StatementScreen() {
       <View style={styles.emptyContainer}>
         <Animated.View style={[styles.emptyContent, { opacity: fadeAnim }]}>
           <View style={styles.emptyIconWrap}>
-            <Landmark size={44} color={Colors.textMuted} />
+            <Landmark size={46} color={Colors.textMuted} />
           </View>
           <Text style={styles.emptyTitle}>No Statement Yet</Text>
           <Text style={styles.emptySubtitle}>
@@ -371,7 +374,7 @@ export default function StatementScreen() {
         <View style={styles.accountCardBody}>
           <View style={styles.accountCardHeader}>
             <View style={styles.bankBadge}>
-              <Landmark size={18} color={Colors.gold} />
+              <Landmark size={20} color={Colors.gold} />
             </View>
             <View style={styles.accountInfo}>
               <Text style={styles.accountName}>{statement.accountHolder}</Text>
@@ -398,7 +401,6 @@ export default function StatementScreen() {
         </View>
       </View>
 
-      {/* Statement Template */}
       <View style={styles.settingsCard}>
         <TouchableOpacity
           style={styles.settingsHeader}
@@ -499,7 +501,6 @@ export default function StatementScreen() {
         </View>
       </View>
 
-      {/* Period Settings */}
       <View style={styles.settingsCard}>
         <TouchableOpacity
           style={styles.settingsHeader}
@@ -584,7 +585,6 @@ export default function StatementScreen() {
         )}
       </View>
 
-      {/* Balance Settings */}
       <View style={styles.settingsCard}>
         <TouchableOpacity
           style={styles.settingsHeader}
@@ -653,7 +653,6 @@ export default function StatementScreen() {
         )}
       </View>
 
-      {/* Transaction Type Toggles */}
       <View style={styles.settingsCard}>
         <TouchableOpacity
           style={styles.settingsHeader}
@@ -941,7 +940,6 @@ export default function StatementScreen() {
         )}
       </View>
 
-      {/* Location / Suburbs */}
       <View style={styles.settingsCard}>
         <TouchableOpacity
           style={styles.settingsHeader}
@@ -1021,7 +1019,6 @@ export default function StatementScreen() {
         )}
       </View>
 
-      {/* Amount Ranges */}
       <View style={styles.settingsCard}>
         <TouchableOpacity
           style={styles.settingsHeader}
@@ -1132,7 +1129,6 @@ export default function StatementScreen() {
         )}
       </View>
 
-      {/* Regenerate Button */}
       <TouchableOpacity
         style={[
           styles.regenerateBtn,
@@ -1279,28 +1275,28 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 100,
+    paddingHorizontal: SIDE_PAD,
+    paddingTop: 14,
+    paddingBottom: 110,
   },
   emptyContainer: {
     flex: 1,
     backgroundColor: Colors.background,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 40,
+    paddingHorizontal: 44,
   },
   emptyContent: {
     alignItems: 'center',
   },
   emptyIconWrap: {
-    width: 88,
-    height: 88,
+    width: 92,
+    height: 92,
     borderRadius: 28,
     backgroundColor: Colors.card,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    marginBottom: 22,
     borderWidth: 1,
     borderColor: Colors.border,
   },
@@ -1318,7 +1314,7 @@ const styles = StyleSheet.create({
   },
   accountCard: {
     backgroundColor: Colors.card,
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: Colors.border,
     marginBottom: 14,
@@ -1328,18 +1324,18 @@ const styles = StyleSheet.create({
     height: 6,
   },
   accountCardBody: {
-    padding: 18,
+    padding: 20,
   },
   accountCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 16,
+    gap: 14,
+    marginBottom: 18,
   },
   bankBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: 13,
+    width: 48,
+    height: 48,
+    borderRadius: 14,
     backgroundColor: Colors.goldDim,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1348,20 +1344,20 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   accountName: {
-    fontSize: 16,
+    fontSize: isSmall ? 15 : 17,
     fontWeight: '700' as const,
     color: Colors.text,
   },
   accountNumber: {
     fontSize: 13,
     color: Colors.textSecondary,
-    marginTop: 2,
+    marginTop: 3,
     fontVariant: ['tabular-nums'] as const,
   },
   balanceRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 14,
+    marginBottom: 16,
   },
   balanceItem: {
     flex: 1,
@@ -1370,7 +1366,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end' as const,
   },
   balanceArrow: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
   },
   balanceLabel: {
     fontSize: 11,
@@ -1381,7 +1377,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   balanceValue: {
-    fontSize: 22,
+    fontSize: isSmall ? 20 : 23,
     fontWeight: '800' as const,
     color: Colors.text,
     fontVariant: ['tabular-nums'] as const,
@@ -1392,11 +1388,11 @@ const styles = StyleSheet.create({
   periodBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
     backgroundColor: Colors.cardElevated,
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    borderRadius: 12,
+    paddingVertical: 11,
+    paddingHorizontal: 14,
   },
   periodText: {
     fontSize: 13,
@@ -1411,22 +1407,22 @@ const styles = StyleSheet.create({
   statItem: {
     flex: 1,
     backgroundColor: Colors.card,
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 14,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: Colors.border,
-    gap: 5,
+    gap: 6,
   },
   statIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
   },
   statAmount: {
-    fontSize: 14,
+    fontSize: isSmall ? 13 : 14,
     fontWeight: '800' as const,
     color: Colors.text,
     fontVariant: ['tabular-nums'] as const,
@@ -1450,7 +1446,7 @@ const styles = StyleSheet.create({
   },
   payDatesSection: {
     backgroundColor: Colors.card,
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: Colors.border,
     marginBottom: 14,
@@ -1460,12 +1456,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
+    padding: 18,
   },
   payDatesHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
   },
   payDatesSectionTitle: {
     fontSize: 15,
@@ -1473,12 +1469,12 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   payDatesList: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingHorizontal: 18,
+    paddingBottom: 18,
   },
   payDateRow: {
     flexDirection: 'row',
-    minHeight: 60,
+    minHeight: 64,
   },
   timelineCol: {
     width: 24,
@@ -1502,8 +1498,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingBottom: 14,
-    paddingLeft: 8,
+    paddingBottom: 16,
+    paddingLeft: 10,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
@@ -1518,13 +1514,13 @@ const styles = StyleSheet.create({
   payDateRange: {
     fontSize: 12,
     color: Colors.textMuted,
-    marginTop: 2,
+    marginTop: 3,
   },
   payDateRight: {
     alignItems: 'flex-end' as const,
   },
   payDateAmount: {
-    fontSize: 16,
+    fontSize: isSmall ? 15 : 17,
     fontWeight: '800' as const,
     color: Colors.gold,
     fontVariant: ['tabular-nums'] as const,
@@ -1532,33 +1528,33 @@ const styles = StyleSheet.create({
   payDatePaidOn: {
     fontSize: 11,
     color: Colors.textSecondary,
-    marginTop: 2,
+    marginTop: 3,
   },
   payDateNote: {
     backgroundColor: Colors.cardElevated,
-    borderRadius: 10,
-    padding: 12,
-    marginTop: 8,
+    borderRadius: 12,
+    padding: 14,
+    marginTop: 10,
   },
   payDateNoteText: {
     fontSize: 12,
     color: Colors.textSecondary,
-    lineHeight: 17,
+    lineHeight: 18,
   },
   actionsSection: {
-    gap: 10,
-    marginBottom: 8,
+    gap: 12,
+    marginBottom: 10,
   },
   viewDocButton: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.card,
-    borderRadius: 14,
-    paddingVertical: 16,
-    paddingHorizontal: 18,
+    borderRadius: 16,
+    paddingVertical: 17,
+    paddingHorizontal: 20,
     borderWidth: 1,
     borderColor: Colors.accent + '40',
-    gap: 10,
+    gap: 12,
   },
   viewDocText: {
     fontSize: 15,
@@ -1568,9 +1564,9 @@ const styles = StyleSheet.create({
   },
   viewDocPagesBadge: {
     backgroundColor: Colors.cardElevated,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 10,
   },
   viewDocPages: {
     fontSize: 12,
@@ -1583,14 +1579,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    paddingVertical: 14,
-    borderRadius: 26,
+    paddingVertical: 15,
+    borderRadius: 28,
     backgroundColor: Colors.accent,
     shadowColor: Colors.accent,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
   },
   exportBtnFilledText: {
     fontSize: 15,
@@ -1603,8 +1599,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    paddingVertical: 14,
-    borderRadius: 26,
+    paddingVertical: 15,
+    borderRadius: 28,
     backgroundColor: Colors.card,
     borderWidth: 1,
     borderColor: Colors.accentDim,
@@ -1622,18 +1618,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: SIDE_PAD,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
   backToOverview: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 10,
+    gap: 7,
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderRadius: 12,
     backgroundColor: Colors.card,
     borderWidth: 1,
     borderColor: Colors.accent + '40',
@@ -1650,24 +1646,26 @@ const styles = StyleSheet.create({
   },
   webviewContainer: {
     flex: 1,
-    margin: 8,
-    borderRadius: 10,
+    marginHorizontal: 10,
+    marginVertical: 8,
+    borderRadius: 12,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: Colors.border,
   },
   docBottomBar: {
-    paddingHorizontal: 16,
+    paddingHorizontal: SIDE_PAD,
     paddingVertical: 12,
-    paddingBottom: 90,
+    paddingBottom: 94,
     flexDirection: 'row',
+    gap: 10,
   },
   bottomPad: {
-    height: 90,
+    height: 100,
   },
   settingsCard: {
     backgroundColor: Colors.card,
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: Colors.border,
     marginBottom: 12,
@@ -1677,17 +1675,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
+    padding: 18,
   },
   settingsHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
   },
   settingsIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 9,
+    width: 34,
+    height: 34,
+    borderRadius: 10,
     backgroundColor: Colors.accentDim,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1700,15 +1698,15 @@ const styles = StyleSheet.create({
   settingsSubtitle: {
     fontSize: 11,
     color: Colors.textMuted,
-    marginTop: 1,
+    marginTop: 2,
   },
   settingsBody: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingHorizontal: 18,
+    paddingBottom: 18,
     gap: 14,
   },
   fieldGroup: {
-    gap: 6,
+    gap: 7,
   },
   fieldLabelRow: {
     flexDirection: 'row',
@@ -1726,9 +1724,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.inputBg,
     borderWidth: 1,
     borderColor: Colors.inputBorder,
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 13,
     fontSize: 15,
     color: Colors.text,
     fontVariant: ['tabular-nums'] as const,
@@ -1737,6 +1735,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.textMuted,
     marginTop: 2,
+    lineHeight: 17,
   },
   lengthPicker: {
     flexDirection: 'row',
@@ -1745,7 +1744,7 @@ const styles = StyleSheet.create({
   lengthOption: {
     flex: 1,
     paddingVertical: 12,
-    borderRadius: 10,
+    borderRadius: 12,
     backgroundColor: Colors.cardElevated,
     alignItems: 'center',
     borderWidth: 1.5,
@@ -1765,9 +1764,9 @@ const styles = StyleSheet.create({
   },
   densityOption: {
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: 11,
     paddingHorizontal: 8,
-    borderRadius: 10,
+    borderRadius: 12,
     backgroundColor: Colors.cardElevated,
     alignItems: 'center',
     borderWidth: 1.5,
@@ -1797,7 +1796,7 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: Colors.border,
-    marginVertical: 2,
+    marginVertical: 4,
   },
   ratioSliderContainer: {
     marginTop: 4,
@@ -1887,12 +1886,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: 8,
     marginTop: 10,
     backgroundColor: Colors.cardElevated,
-    borderRadius: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+    borderRadius: 10,
+    paddingVertical: 7,
+    paddingHorizontal: 14,
   },
   ratioValueText: {
     fontSize: 12,
@@ -1903,12 +1902,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 6,
+    paddingVertical: 7,
   },
   toggleRowLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
   },
   toggleRowLabel: {
     fontSize: 14,
@@ -1929,20 +1928,20 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.inputBg,
     borderWidth: 1,
     borderColor: Colors.inputBorder,
-    borderRadius: 10,
+    borderRadius: 12,
     overflow: 'hidden',
   },
   currencyPrefix: {
     fontSize: 15,
     fontWeight: '600' as const,
     color: Colors.textMuted,
-    paddingLeft: 12,
+    paddingLeft: 14,
     paddingRight: 2,
   },
   currencyInput: {
     flex: 1,
     paddingHorizontal: 8,
-    paddingVertical: 12,
+    paddingVertical: 13,
     fontSize: 15,
     color: Colors.text,
     fontVariant: ['tabular-nums'] as const,
@@ -1967,15 +1966,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    paddingVertical: 15,
-    borderRadius: 24,
+    paddingVertical: 16,
+    borderRadius: 28,
     backgroundColor: Colors.accent,
-    marginBottom: 16,
+    marginBottom: 18,
     shadowColor: Colors.accent,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
+    elevation: 6,
   },
   regenerateBtnDisabled: {
     opacity: 0.5,
@@ -1987,10 +1986,10 @@ const styles = StyleSheet.create({
   },
   mortgageSettings: {
     marginTop: 8,
-    paddingTop: 10,
+    paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
-    gap: 12,
+    gap: 14,
   },
   templatePicker: {
     flexDirection: 'row',
@@ -2003,7 +2002,7 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingVertical: 14,
     paddingHorizontal: 14,
-    borderRadius: 12,
+    borderRadius: 14,
     backgroundColor: Colors.cardElevated,
     borderWidth: 1.5,
     borderColor: 'transparent',
