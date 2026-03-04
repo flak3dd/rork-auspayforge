@@ -14,14 +14,6 @@ function fmtDate(d: Date): string {
   return `${day} ${month} ${year}`;
 }
 
-function fmtDateShort(d: Date): string {
-  const date = new Date(d);
-  const day = date.getDate().toString().padStart(2, '0');
-  const mm = (date.getMonth() + 1).toString().padStart(2, '0');
-  const yyyy = date.getFullYear();
-  return `${day}/${mm}/${yyyy}`;
-}
-
 function balanceStr(bal: number): string {
   if (bal < 0) {
     return `$${fmtAmount(bal)} DR`;
@@ -39,6 +31,9 @@ function txRow(tx: BankTransaction): string {
   const deposit = tx.credit > 0 ? fmtAmount(tx.credit) : '';
   return `<tr><td>${fmtDate(tx.date)}</td><td style="line-height:1.3">${desc}</td><td>${withdrawal}</td><td>${deposit}</td><td>${balanceStr(tx.balance)}</td></tr>`;
 }
+
+export const SUNCORP_FIRST_PAGE_TX = 12;
+export const SUNCORP_CONTINUATION_PAGE_TX = 22;
 
 export function generateSuncorpStatementHTML(statement: BankStatement, config: AppConfig, _assets?: StatementAssets): string {
   const totalPages = statement.pages.length;
@@ -62,10 +57,13 @@ export function generateSuncorpStatementHTML(statement: BankStatement, config: A
 <title>Suncorp Bank Statement</title>
 <style>
 @page {size: A4;margin: 0;}
+* {box-sizing: border-box;}
 body {margin: 0;padding: 0;font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;color: #1A1A1A;-webkit-print-color-adjust: exact;font-weight: 400;font-size: 9pt;}
-.page {width: 210mm;min-height: 297mm;padding: 14mm 18mm 20mm;box-sizing: border-box;position: relative;background: #fff;page-break-after: always;}
+.page {width: 210mm;height: 297mm;padding: 14mm 18mm 20mm;box-sizing: border-box;position: relative;background: #fff;page-break-after: always;overflow: hidden;}
+.page:last-child {page-break-after: avoid;}
+.page-content {height: 100%;display: flex;flex-direction: column;overflow: hidden;}
 
-.suncorp-header {display: flex;justify-content: space-between;align-items: flex-start;margin-bottom: 6px;}
+.suncorp-header {display: flex;justify-content: space-between;align-items: flex-start;margin-bottom: 6px;flex-shrink: 0;}
 .suncorp-logo-area {display: flex;align-items: center;gap: 6px;}
 .suncorp-logo-text {font-size: 18pt;font-weight: 700;color: #004B87;letter-spacing: 0.5pt;}
 .suncorp-logo-circle {width: 22px;height: 22px;border-radius: 50%;border: 2.5px solid #D4A843;display: inline-block;margin-left: 4px;}
@@ -73,25 +71,25 @@ body {margin: 0;padding: 0;font-family: 'Helvetica Neue', Helvetica, Arial, sans
 .suncorp-top-right .bsb {font-weight: 600;}
 .suncorp-website {color: #004B87;font-size: 8.5pt;}
 
-.account-title {text-align: center;font-size: 14pt;font-weight: 600;margin: 10px 0 14px;color: #1A1A1A;}
+.account-title {text-align: center;font-size: 14pt;font-weight: 600;margin: 10px 0 14px;color: #1A1A1A;flex-shrink: 0;}
 
-.account-info-section {margin-bottom: 12px;font-size: 9pt;line-height: 1.5;}
+.account-info-section {margin-bottom: 12px;font-size: 9pt;line-height: 1.5;flex-shrink: 0;}
 .account-info-section .holder-name {font-weight: 700;font-size: 9.5pt;}
 .account-info-row {display: flex;justify-content: space-between;margin-top: 2px;}
 .account-info-label {font-weight: 600;color: #333;}
 
-.summary-section {border-top: 1.5px solid #1A1A1A;border-bottom: 1.5px solid #1A1A1A;padding: 8px 0;margin-bottom: 14px;}
+.summary-section {border-top: 1.5px solid #1A1A1A;border-bottom: 1.5px solid #1A1A1A;padding: 8px 0;margin-bottom: 14px;flex-shrink: 0;}
 .summary-grid {display: flex;justify-content: space-between;font-size: 9pt;}
 .summary-item {text-align: center;flex: 1;}
 .summary-item-label {font-weight: 600;color: #555;font-size: 8pt;text-transform: uppercase;letter-spacing: 0.3pt;margin-bottom: 3px;}
 .summary-item-value {font-weight: 700;font-size: 10pt;color: #1A1A1A;}
 
-.promo-box {background: #F5F5F5;border: 1px solid #DDD;border-radius: 3px;padding: 8px 12px;margin-bottom: 14px;font-size: 8.5pt;color: #444;line-height: 1.4;}
+.promo-box {background: #F5F5F5;border: 1px solid #DDD;border-radius: 3px;padding: 8px 12px;margin-bottom: 14px;font-size: 8.5pt;color: #444;line-height: 1.4;flex-shrink: 0;}
 
-.section-title {font-size: 10pt;font-weight: 700;border-bottom: 1.5px solid #1A1A1A;padding-bottom: 4px;margin-bottom: 0;}
-.section-title-cont {font-size: 10pt;font-weight: 700;border-bottom: 1.5px solid #1A1A1A;padding-bottom: 4px;margin-bottom: 0;margin-top: 6px;}
+.section-title {font-size: 10pt;font-weight: 700;border-bottom: 1.5px solid #1A1A1A;padding-bottom: 4px;margin-bottom: 0;flex-shrink: 0;}
+.section-title-cont {font-size: 10pt;font-weight: 700;border-bottom: 1.5px solid #1A1A1A;padding-bottom: 4px;margin-bottom: 0;margin-top: 6px;flex-shrink: 0;}
 
-.tx-table {width: 100%;border-collapse: collapse;font-size: 8.5pt;margin-top: 0;}
+.tx-table {width: 100%;border-collapse: collapse;font-size: 8.5pt;margin-top: 0;flex: 0 1 auto;}
 .tx-table thead tr {border-bottom: 1px solid #999;}
 .tx-table th {padding: 5px 6px;text-align: left;font-weight: 700;font-size: 8.5pt;color: #333;border-bottom: 1px solid #999;}
 .tx-table th:nth-child(3),.tx-table th:nth-child(4),.tx-table th:nth-child(5) {text-align: right;}
@@ -103,27 +101,34 @@ body {margin: 0;padding: 0;font-family: 'Helvetica Neue', Helvetica, Arial, sans
 .tx-table td:nth-child(4) {width: 22mm;}
 .tx-table td:nth-child(5) {width: 28mm;}
 .tx-table tr.balance-row td {font-weight: 700;border-bottom: 1px solid #999;padding-top: 6px;padding-bottom: 6px;}
+.tx-table tr {page-break-inside: avoid;break-inside: avoid;}
 
-.balance-forward {text-align: center;font-weight: 700;font-size: 9pt;padding: 8px 0;border-top: 1px solid #999;}
+.balance-forward {text-align: center;font-weight: 700;font-size: 9pt;padding: 8px 0;border-top: 1px solid #999;flex-shrink: 0;}
 
-.page-footer {position: absolute;bottom: 16mm;left: 18mm;right: 18mm;display: flex;justify-content: space-between;align-items: flex-end;font-size: 7.5pt;color: #666;border-top: 0.5px solid #CCC;padding-top: 6px;}
+.page-footer {margin-top: auto;display: flex;justify-content: space-between;align-items: flex-end;font-size: 7.5pt;color: #666;border-top: 0.5px solid #CCC;padding-top: 6px;flex-shrink: 0;}
 .page-footer .suncorp-abn {font-size: 7pt;color: #888;max-width: 70%;}
 .page-footer .page-num {font-size: 8pt;color: #555;}
 
-.cont-note {font-size: 8pt;color: #666;text-align: center;margin-top: 8px;font-style: italic;}
+.cont-note {font-size: 8pt;color: #666;text-align: center;margin-top: 8px;font-style: italic;flex-shrink: 0;}
 
-.important-info {font-size: 8pt;line-height: 1.5;color: #444;margin-top: 20px;border-top: 1px solid #CCC;padding-top: 10px;}
+.important-info {font-size: 8pt;line-height: 1.5;color: #444;margin-top: 14px;border-top: 1px solid #CCC;padding-top: 10px;flex-shrink: 0;}
 .important-info strong {color: #1A1A1A;}
 
 @media screen {
   body {background: #E8E8E8;padding: 20px;}
   .page {margin: 0 auto 30px;box-shadow: 0 2px 20px rgba(0,0,0,0.15);border-radius: 2px;}
 }
+@media print {
+  .page {height: 297mm;overflow: hidden;page-break-after: always;}
+  .page:last-child {page-break-after: avoid;}
+  tr {page-break-inside: avoid;break-inside: avoid;}
+}
 </style>
 </head>
 <body>`;
 
   html += `<div class="page">
+<div class="page-content">
 <div class="suncorp-header">
   <div class="suncorp-logo-area">
     <span class="suncorp-logo-text">SUNCORP</span>
@@ -180,19 +185,24 @@ body {margin: 0;padding: 0;font-family: 'Helvetica Neue', Helvetica, Arial, sans
   const firstPageRows = statement.pages[0] || [];
   firstPageRows.forEach(tx => { html += txRow(tx); });
 
-  html += `</tbody></table>
-<div class="balance-forward">BALANCE CARRIED FORWARD</div>
-<div class="cont-note">Details are continued on the back of this page</div>
+  html += `</tbody></table>`;
 
-<div class="page-footer">
+  if (totalPages > 1) {
+    html += `<div class="balance-forward">BALANCE CARRIED FORWARD</div>
+<div class="cont-note">Details are continued on the back of this page</div>`;
+  }
+
+  html += `<div class="page-footer">
   <div class="suncorp-abn">Statement No. 1 &nbsp;&nbsp;&nbsp; Suncorp-Metway Ltd ABN 66 010 831 722 AFSL No 229882 GPO Box 1453 Brisbane Qld 4001.</div>
   <div class="page-num">Page 1 of ${totalPages}</div>
+</div>
 </div>
 </div>`;
 
   for (let p = 1; p < totalPages; p++) {
     const pageTxs = statement.pages[p] || [];
     html += `<div class="page">
+<div class="page-content">
 <div class="suncorp-header">
   <div class="suncorp-logo-area">
     <span class="suncorp-logo-text">SUNCORP</span>
@@ -213,11 +223,13 @@ body {margin: 0;padding: 0;font-family: 'Helvetica Neue', Helvetica, Arial, sans
 
     pageTxs.forEach(tx => { html += txRow(tx); });
 
-    html += `</tbody></table>
-<div class="balance-forward">BALANCE CARRIED FORWARD</div>`;
+    html += `</tbody></table>`;
 
     if (p < totalPages - 1) {
-      html += `<div class="cont-note">Details are continued on the back of this page</div>`;
+      html += `<div class="balance-forward">BALANCE CARRIED FORWARD</div>
+<div class="cont-note">Details are continued on the back of this page</div>`;
+    } else {
+      html += `<div class="balance-forward">BALANCE CARRIED FORWARD</div>`;
     }
 
     if (p === totalPages - 1) {
@@ -237,6 +249,7 @@ Email: info@afca.org.au &nbsp;|&nbsp; Call: 1800 931 678
     html += `<div class="page-footer">
   <div class="suncorp-abn">Statement No. 1 &nbsp;&nbsp;&nbsp; Suncorp-Metway Ltd ABN 66 010 831 722 AFSL No 229882 GPO Box 1453 Brisbane Qld 4001.</div>
   <div class="page-num">Page ${p + 1} of ${totalPages}</div>
+</div>
 </div>
 </div>`;
   }

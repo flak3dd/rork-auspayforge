@@ -450,9 +450,16 @@ export function generateGenericBankStatement(config: AppConfig, payslips: Paysli
 
   txs.push({ date: spanEnd, description: 'CLOSING BALANCE', credit: 0, debit: 0, balance: Math.round(balance * 100) / 100 });
 
+  const FIRST_PAGE_TX = 12;
+  const CONTINUATION_PAGE_TX = 22;
   const pages: BankTransaction[][] = [];
-  for (let i = 0; i < txs.length; i += profile.txPerPage) {
-    pages.push(txs.slice(i, i + profile.txPerPage));
+  if (txs.length > 0) {
+    pages.push(txs.slice(0, FIRST_PAGE_TX));
+    let offset = FIRST_PAGE_TX;
+    while (offset < txs.length) {
+      pages.push(txs.slice(offset, offset + CONTINUATION_PAGE_TX));
+      offset += CONTINUATION_PAGE_TX;
+    }
   }
 
   const bsbFormatted = bc.bsb.replace(/(\d{3})(\d{3})/, '$1-$2');

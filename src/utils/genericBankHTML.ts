@@ -80,6 +80,9 @@ function txRow(tx: BankTransaction): string {
   return `<tr><td>${fmtDate(tx.date)}</td><td style="line-height:1.3">${desc}</td><td>${debit}</td><td>${credit}</td><td>${balanceStr(tx.balance)}</td></tr>`;
 }
 
+export const GENERIC_FIRST_PAGE_TX = 12;
+export const GENERIC_CONTINUATION_PAGE_TX = 22;
+
 export function generateGenericStatementHTML(statement: BankStatement, config: AppConfig, bankKey: string, _assets?: StatementAssets): string {
   const brand = BANK_BRANDS[bankKey] || BANK_BRANDS.nab;
   const totalPages = statement.pages.length;
@@ -98,25 +101,28 @@ export function generateGenericStatementHTML(statement: BankStatement, config: A
 <title>${brand.bankName} Statement</title>
 <style>
 @page {size: A4;margin: 0;}
+* {box-sizing: border-box;}
 body {margin: 0;padding: 0;font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;color: #1A1A1A;-webkit-print-color-adjust: exact;font-weight: 400;font-size: 9pt;}
-.page {width: 210mm;min-height: 297mm;padding: 14mm 18mm 22mm;box-sizing: border-box;position: relative;background: #fff;page-break-after: always;}
-.header {display: flex;justify-content: space-between;align-items: flex-start;margin-bottom: 8px;padding-bottom: 8px;border-bottom: 3px solid ${brand.primaryColor};}
+.page {width: 210mm;height: 297mm;padding: 14mm 18mm 20mm;box-sizing: border-box;position: relative;background: #fff;page-break-after: always;overflow: hidden;}
+.page:last-child {page-break-after: avoid;}
+.page-content {height: 100%;display: flex;flex-direction: column;overflow: hidden;}
+.header {display: flex;justify-content: space-between;align-items: flex-start;margin-bottom: 8px;padding-bottom: 8px;border-bottom: 3px solid ${brand.primaryColor};flex-shrink: 0;}
 .logo-text {font-size: 22pt;font-weight: 700;color: ${brand.primaryColor};letter-spacing: 0.5pt;}
 .top-right {text-align: right;font-size: 9pt;line-height: 1.4;}
 .top-right .bsb {font-weight: 600;}
-.acct-title {font-size: 13pt;font-weight: 600;margin: 10px 0 12px;color: ${brand.primaryColor};}
-.info-section {margin-bottom: 10px;font-size: 9pt;line-height: 1.5;}
+.acct-title {font-size: 13pt;font-weight: 600;margin: 10px 0 12px;color: ${brand.primaryColor};flex-shrink: 0;}
+.info-section {margin-bottom: 10px;font-size: 9pt;line-height: 1.5;flex-shrink: 0;}
 .info-section .name {font-weight: 700;font-size: 10pt;}
 .info-row {display: flex;justify-content: space-between;margin-top: 2px;}
 .info-label {font-weight: 600;color: #333;}
-.summary {border-top: 2px solid ${brand.primaryColor};border-bottom: 2px solid ${brand.primaryColor};padding: 8px 0;margin-bottom: 12px;}
+.summary {border-top: 2px solid ${brand.primaryColor};border-bottom: 2px solid ${brand.primaryColor};padding: 8px 0;margin-bottom: 12px;flex-shrink: 0;}
 .summary-grid {display: flex;justify-content: space-between;font-size: 9pt;}
 .summary-item {text-align: center;flex: 1;}
 .summary-item-label {font-weight: 600;color: #555;font-size: 8pt;text-transform: uppercase;letter-spacing: 0.3pt;margin-bottom: 3px;}
 .summary-item-value {font-weight: 700;font-size: 10pt;}
-.promo {background: #F5F5F5;border-left: 3px solid ${brand.primaryColor};padding: 8px 12px;margin-bottom: 12px;font-size: 8.5pt;color: #444;line-height: 1.4;}
-.section-title {font-size: 10pt;font-weight: 700;color: ${brand.primaryColor};border-bottom: 1.5px solid #1A1A1A;padding-bottom: 4px;margin-bottom: 0;}
-.tx-table {width: 100%;border-collapse: collapse;font-size: 8.5pt;margin-top: 0;}
+.promo {background: #F5F5F5;border-left: 3px solid ${brand.primaryColor};padding: 8px 12px;margin-bottom: 12px;font-size: 8.5pt;color: #444;line-height: 1.4;flex-shrink: 0;}
+.section-title {font-size: 10pt;font-weight: 700;color: ${brand.primaryColor};border-bottom: 1.5px solid #1A1A1A;padding-bottom: 4px;margin-bottom: 0;flex-shrink: 0;}
+.tx-table {width: 100%;border-collapse: collapse;font-size: 8.5pt;margin-top: 0;flex: 0 1 auto;}
 .tx-table thead tr {border-bottom: 1px solid #999;}
 .tx-table th {padding: 5px 6px;text-align: left;font-weight: 700;font-size: 8.5pt;color: #333;border-bottom: 1px solid #999;}
 .tx-table th:nth-child(3),.tx-table th:nth-child(4),.tx-table th:nth-child(5) {text-align: right;}
@@ -125,20 +131,27 @@ body {margin: 0;padding: 0;font-family: 'Helvetica Neue', Helvetica, Arial, sans
 .tx-table td:nth-child(2) {width: 72mm;}
 .tx-table td:nth-child(3),.tx-table td:nth-child(4),.tx-table td:nth-child(5) {text-align: right;white-space: nowrap;}
 .tx-table tr.bal-row td {font-weight: 700;border-bottom: 1px solid #999;padding-top: 6px;padding-bottom: 6px;}
-.page-footer {position: absolute;bottom: 14mm;left: 18mm;right: 18mm;display: flex;justify-content: space-between;font-size: 7.5pt;color: #666;border-top: 1px solid ${brand.primaryColor};padding-top: 6px;}
+.tx-table tr {page-break-inside: avoid;break-inside: avoid;}
+.page-footer {margin-top: auto;display: flex;justify-content: space-between;font-size: 7.5pt;color: #666;border-top: 1px solid ${brand.primaryColor};padding-top: 6px;flex-shrink: 0;}
 .footer-abn {font-size: 7pt;color: #888;max-width: 70%;}
 .footer-page {font-size: 8pt;color: #555;}
-.important {font-size: 8pt;line-height: 1.5;color: #444;margin-top: 20px;border-top: 1px solid #CCC;padding-top: 10px;}
+.important {font-size: 8pt;line-height: 1.5;color: #444;margin-top: 14px;border-top: 1px solid #CCC;padding-top: 10px;flex-shrink: 0;}
 .important strong {color: #1A1A1A;}
 @media screen {
   body {background: #E8E8E8;padding: 20px;}
   .page {margin: 0 auto 30px;box-shadow: 0 2px 20px rgba(0,0,0,0.15);border-radius: 2px;}
+}
+@media print {
+  .page {height: 297mm;overflow: hidden;page-break-after: always;}
+  .page:last-child {page-break-after: avoid;}
+  tr {page-break-inside: avoid;break-inside: avoid;}
 }
 </style>
 </head>
 <body>`;
 
   html += `<div class="page">
+<div class="page-content">
 <div class="header">
   <span class="logo-text">${brand.bankName}</span>
   <div class="top-right">
@@ -177,10 +190,12 @@ body {margin: 0;padding: 0;font-family: 'Helvetica Neue', Helvetica, Arial, sans
   <div class="footer-abn">${brand.bankFullName} ${brand.abn} ${brand.afsl}</div>
   <div class="footer-page">Page 1 of ${totalPages}</div>
 </div>
+</div>
 </div>`;
 
   for (let p = 1; p < totalPages; p++) {
     html += `<div class="page">
+<div class="page-content">
 <div class="header">
   <span class="logo-text">${brand.bankName}</span>
   <div class="top-right">
@@ -210,6 +225,7 @@ Write to: AFCA, GPO Box 3, Melbourne VIC 3001 | Call: 1800 931 678
     html += `<div class="page-footer">
   <div class="footer-abn">${brand.bankFullName} ${brand.abn} ${brand.afsl}</div>
   <div class="footer-page">Page ${p + 1} of ${totalPages}</div>
+</div>
 </div>
 </div>`;
   }

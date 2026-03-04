@@ -606,10 +606,16 @@ export function generateSuncorpBankStatement(config: AppConfig, payslips: Paysli
     balance: Math.round(balance * 100) / 100,
   });
 
-  const TX_PER_PAGE = 18;
+  const FIRST_PAGE_TX = 12;
+  const CONTINUATION_PAGE_TX = 22;
   const pages: BankTransaction[][] = [];
-  for (let i = 0; i < txs.length; i += TX_PER_PAGE) {
-    pages.push(txs.slice(i, i + TX_PER_PAGE));
+  if (txs.length > 0) {
+    pages.push(txs.slice(0, FIRST_PAGE_TX));
+    let offset = FIRST_PAGE_TX;
+    while (offset < txs.length) {
+      pages.push(txs.slice(offset, offset + CONTINUATION_PAGE_TX));
+      offset += CONTINUATION_PAGE_TX;
+    }
   }
 
   const bsbFormatted = config.bankConfig.bsb.replace(/(\d{3})(\d{3})/, '$1-$2');
