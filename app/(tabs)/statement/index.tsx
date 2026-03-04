@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
   TextInput,
   Platform,
   Switch,
+  PanResponder,
+  LayoutChangeEvent,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
@@ -126,6 +128,40 @@ export default function StatementScreen() {
   const [suburb2, setSuburb2] = useState<string>(defaultSuburbs[1]);
   const [suburb3, setSuburb3] = useState<string>(defaultSuburbs[2]);
   const [debitCreditRatio, setDebitCreditRatio] = useState<number>(config.bankConfig.debitCreditRatio ?? 0.5);
+  const ratioTrackWidth = useRef<number>(0);
+  const ratioTrackX = useRef<number>(0);
+  const autoRegenTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const ratioPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: (evt) => {
+        const x = evt.nativeEvent.pageX - ratioTrackX.current;
+        const val = Math.max(0, Math.min(1, x / (ratioTrackWidth.current || 1)));
+        setDebitCreditRatio(Math.round(val * 20) / 20);
+        Haptics.selectionAsync();
+      },
+      onPanResponderMove: (evt) => {
+        const x = evt.nativeEvent.pageX - ratioTrackX.current;
+        const val = Math.max(0, Math.min(1, x / (ratioTrackWidth.current || 1)));
+        setDebitCreditRatio(Math.round(val * 20) / 20);
+      },
+      onPanResponderRelease: () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      },
+    })
+  ).current;
+
+  const onRatioTrackLayout = useCallback((e: LayoutChangeEvent) => {
+    ratioTrackWidth.current = e.nativeEvent.layout.width;
+    (e.target as any)?.measureInWindow?.((x: number) => {
+      ratioTrackX.current = x;
+    });
+  }, []);
+
+  const handleRegenerateRef = useRef<() => void>(() => {});
+  const prevRatioRef = useRef<number>(debitCreditRatio);
   const [includeMortgageRent, setIncludeMortgageRent] = useState<boolean>(config.bankConfig.includeMortgageRent ?? false);
   const [mortgageRentAmount, setMortgageRentAmount] = useState<string>(String(config.bankConfig.mortgageRentAmount ?? 1800));
   const [mortgageRentLabel, setMortgageRentLabel] = useState<'mortgage' | 'rent'>(config.bankConfig.mortgageRentLabel ?? 'mortgage');
@@ -207,6 +243,22 @@ export default function StatementScreen() {
     includeMortgageRent, mortgageRentAmount, mortgageRentLabel, mortgageRentDay, mortgageRentTransactionName,
     regenerateStatement,
   ]);
+
+  handleRegenerateRef.current = handleRegenerate;
+
+  useEffect(() => {
+    if (prevRatioRef.current !== debitCreditRatio) {
+      prevRatioRef.current = debitCreditRatio;
+      if (autoRegenTimer.current) clearTimeout(autoRegenTimer.current);
+      autoRegenTimer.current = setTimeout(() => {
+        console.log('[Statement] Auto-regenerating after ratio change to', debitCreditRatio);
+        handleRegenerateRef.current();
+      }, 600);
+    }
+    return () => {
+      if (autoRegenTimer.current) clearTimeout(autoRegenTimer.current);
+    };
+  }, [debitCreditRatio]);
 
   const totalCredits = statement?.transactions.reduce((sum, tx) => sum + tx.credit, 0) ?? 0;
   const totalDebits = statement?.transactions.reduce((sum, tx) => sum + tx.debit, 0) ?? 0;
@@ -554,86 +606,74 @@ export default function StatementScreen() {
                   <Text style={[styles.ratioEndLabel, debitCreditRatio < 0.4 && styles.ratioEndLabelActive]}>
                     More Debits
                   </Text>
+                  <Text style={styles.ratioPercentText}>
+                    {Math.round(debitCreditRatio * 100)}%
+                  </Text>
                   <Text style={[styles.ratioEndLabel, debitCreditRatio > 0.6 && styles.ratioCreditLabelActive]}>
                     More Credits
                   </Text>
                 </View>
-                <View style={styles.ratioTrack}>
+                <View
+                  style={styles.ratioTrackOuter}
+                  onLayout={onRatioTrackLayout}
+                  ref={(ref) => {
+                    if (ref) {
+                      (ref as any).measureInWindow?.((x: number) => {
+                        ratioTrackX.current = x;
+                      });
+                    }
+                  }}
+                >
+                  <View style={styles.ratioTrack}>
+                    <View
+                      style={[
+                        styles.ratioFillLeft,
+                        { width: `${(1 - debitCreditRatio) * 100}%` },
+                      ]}
+                    />
+                    <View
+                      style={[
+                        styles.ratioFillRight,
+                        { width: `${debitCreditRatio * 100}%` },
+                      ]}
+                    />
+                  </View>
+                  {Platform.OS === 'web' ? (
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={Math.round(debitCreditRatio * 100)}
+                      onChange={(e: any) => {
+                        const val = parseInt(e.target.value, 10) / 100;
+                        setDebitCreditRatio(Math.round(val * 20) / 20);
+                      }}
+                      style={{
+                        width: '100%',
+                        height: 40,
+                        opacity: 0,
+                        position: 'absolute' as const,
+                        cursor: 'pointer',
+                        zIndex: 10,
+                        margin: 0,
+                        top: -10,
+                        left: 0,
+                      }}
+                    />
+                  ) : (
+                    <View
+                      style={styles.ratioSliderTouchArea}
+                      {...ratioPanResponder.panHandlers}
+                    />
+                  )}
                   <View
                     style={[
-                      styles.ratioFillLeft,
-                      { width: `${(1 - debitCreditRatio) * 100}%` },
+                      styles.ratioThumb,
+                      { left: `${debitCreditRatio * 100}%` },
                     ]}
-                  />
-                  <View
-                    style={[
-                      styles.ratioFillRight,
-                      { width: `${debitCreditRatio * 100}%` },
-                    ]}
+                    pointerEvents="none"
                   />
                 </View>
-                {Platform.OS === 'web' ? (
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    value={Math.round(debitCreditRatio * 100)}
-                    onChange={(e: any) => {
-                      const val = parseInt(e.target.value, 10) / 100;
-                      setDebitCreditRatio(val);
-                    }}
-                    style={{
-                      width: '100%',
-                      height: 40,
-                      opacity: 0,
-                      position: 'absolute' as const,
-                      cursor: 'pointer',
-                      zIndex: 10,
-                      margin: 0,
-                      top: 20,
-                    }}
-                  />
-                ) : null}
-                {Platform.OS !== 'web' ? (
-                  <View
-                    style={styles.ratioSliderTouchArea}
-                    onStartShouldSetResponder={() => true}
-                    onMoveShouldSetResponder={() => true}
-                    onResponderGrant={(e) => {
-                      const touch = e.nativeEvent;
-                      const layout = (e.target as any);
-                      if (layout?.measure) {
-                        layout.measure((_x: number, _y: number, width: number) => {
-                          const val = Math.max(0, Math.min(1, touch.locationX / width));
-                          setDebitCreditRatio(Math.round(val * 20) / 20);
-                          Haptics.selectionAsync();
-                        });
-                      } else {
-                        setDebitCreditRatio(Math.round(Math.max(0, Math.min(1, touch.locationX / 300)) * 20) / 20);
-                        Haptics.selectionAsync();
-                      }
-                    }}
-                    onResponderMove={(e) => {
-                      const touch = e.nativeEvent;
-                      const layout = (e.target as any);
-                      if (layout?.measure) {
-                        layout.measure((_x: number, _y: number, width: number) => {
-                          const val = Math.max(0, Math.min(1, touch.locationX / width));
-                          setDebitCreditRatio(Math.round(val * 20) / 20);
-                        });
-                      } else {
-                        setDebitCreditRatio(Math.round(Math.max(0, Math.min(1, touch.locationX / 300)) * 20) / 20);
-                      }
-                    }}
-                  />
-                ) : null}
-                <View
-                  style={[
-                    styles.ratioThumb,
-                    { left: `${debitCreditRatio * 100}%` },
-                  ]}
-                  pointerEvents="none"
-                />
                 <View style={styles.ratioMarkers}>
                   <View style={styles.ratioMarker} />
                   <View style={styles.ratioMarker} />
@@ -1602,7 +1642,6 @@ const styles = StyleSheet.create({
   },
   ratioSliderContainer: {
     marginTop: 4,
-    position: 'relative' as const,
   },
   ratioLabelsRow: {
     flexDirection: 'row',
@@ -1619,6 +1658,11 @@ const styles = StyleSheet.create({
   },
   ratioCreditLabelActive: {
     color: Colors.success,
+  },
+  ratioTrackOuter: {
+    position: 'relative' as const,
+    height: 20,
+    justifyContent: 'center' as const,
   },
   ratioTrack: {
     height: 6,
@@ -1637,15 +1681,21 @@ const styles = StyleSheet.create({
   },
   ratioSliderTouchArea: {
     position: 'absolute' as const,
-    top: -14,
+    top: -10,
     left: 0,
     right: 0,
     height: 40,
     zIndex: 10,
   },
+  ratioPercentText: {
+    fontSize: 12,
+    fontWeight: '700' as const,
+    color: Colors.accent,
+    fontVariant: ['tabular-nums'] as const,
+  },
   ratioThumb: {
     position: 'absolute' as const,
-    top: -5,
+    top: 2,
     width: 16,
     height: 16,
     borderRadius: 8,
