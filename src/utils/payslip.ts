@@ -58,30 +58,115 @@ function generatePeriods(config: AppConfig): PayslipPeriod[] {
   return periods;
 }
 
+function getFYStart(referenceDate: Date): Date {
+  const year = referenceDate.getMonth() >= 6 ? referenceDate.getFullYear() : referenceDate.getFullYear() - 1;
+  return new Date(year, 6, 1);
+}
+
+function countPriorPeriods(fyStart: Date, firstPeriodStart: Date, frequency: 'weekly' | 'fortnightly' | 'monthly'): number {
+  const diffMs = firstPeriodStart.getTime() - fyStart.getTime();
+  if (diffMs <= 0) return 0;
+  const diffDays = diffMs / (1000 * 60 * 60 * 24);
+  switch (frequency) {
+    case 'weekly': return Math.floor(diffDays / 7);
+    case 'fortnightly': return Math.floor(diffDays / 14);
+    case 'monthly': {
+      let months = (firstPeriodStart.getFullYear() - fyStart.getFullYear()) * 12 + (firstPeriodStart.getMonth() - fyStart.getMonth());
+      if (firstPeriodStart.getDate() < fyStart.getDate()) months--;
+      return Math.max(0, months);
+    }
+  }
+}
+
 export function generatePayslips(config: AppConfig): Payslip[] {
   const periods = generatePeriods(config);
   const ppy = periodsPerYear(config.payConfig.frequency);
-
-  let ytdGross = 0;
-  let ytdNet = 0;
-  let ytdTax = 0;
-  let ytdSuper = 0;
-  const ytdEarnings: Record<string, number> = {};
-  const ytdDeductions: Record<string, number> = {};
-  let annualLeaveBalance = 0;
-  let personalLeaveBalance = 0;
-  let longServiceLeaveBalance = 0;
-  let ytdAnnualAccrued = 0;
-  let ytdPersonalAccrued = 0;
-  let ytdLSLAccrued = 0;
 
   const annualLeavePerPeriod = 152 / ppy;
   const personalLeavePerPeriod = 76 / ppy;
   const lslPerPeriod = Math.round((6.0769 / ppy) * 100) / 100;
 
+  const firstPeriodStart = new Date(config.payConfig.startDate);
+  const fyStart = getFYStart(firstPeriodStart);
+  const priorPeriods = countPriorPeriods(fyStart, firstPeriodStart, config.payConfig.frequency);
+
   const annualRate = config.payConfig.basis === 'salary'
     ? config.payConfig.annualSalary
     : config.payConfig.hourlyRate * config.payConfig.weeklyHours * 52;
+
+  let priorGrossPerPeriod = 0;
+  if (config.payConfig.useExactPay && config.payConfig.exactPayPerPeriod > 0) {
+    priorGrossPerPeriod = Math.round(config.payConfig.exactPayPerPeriod * 100) / 100;
+  } else if (config.payConfig.basis === 'salary') {
+    priorGrossPerPeriod = Math.round((config.payConfig.annualSalary / ppy) * 100) / 100;
+  } else {
+    const hoursMultiplier = config.payConfig.frequency === 'weekly' ? 1 : config.payConfig.frequency === 'fortnightly' ? 2 : 4.33;
+    const hours = config.payConfig.weeklyHours * hoursMultiplier;
+    priorGrossPerPeriod = Math.round(config.payConfig.hourlyRate * hours * 100) / 100;
+  }
+
+  let priorAllowancesPerPeriod = 0;
+  let priorOvertimePerPeriod = 0;
+  for (const allowance of config.allowances) {
+    let amount = allowance.fixedAmount;
+    if (allowance.hours > 0 && config.payConfig.basis === 'hourly') {
+      amount = allowance.hours * config.payConfig.hourlyRate * allowance.multiplier;
+    }
+    amount = Math.round(amount * 100) / 100;
+    priorAllowancesPerPeriod += amount;
+    if (allowance.multiplier > 1) {
+      priorOvertimePerPeriod += amount;
+    }
+  }
+  priorGrossPerPeriod += priorAllowancesPerPeriod;
+
+  const priorOtePerPeriod = priorGrossPerPeriod - priorOvertimePerPeriod;
+  const priorAnnualProjection = priorGrossPerPeriod * ppy;
+  const priorTaxPerPeriod = calculatePeriodTax(priorAnnualProjection, config.payConfig.frequency);
+  const priorSuperPerPeriod = Math.round(priorOtePerPeriod * 0.115 * 100) / 100;
+
+  let priorDeductionsPerPeriod = priorTaxPerPeriod;
+  for (const ded of config.deductions) {
+    priorDeductionsPerPeriod += ded.amountPerPeriod;
+  }
+  const priorNetPerPeriod = Math.round((priorGrossPerPeriod - priorDeductionsPerPeriod) * 100) / 100;
+
+  let ytdGross = Math.round(priorGrossPerPeriod * priorPeriods * 100) / 100;
+  let ytdNet = Math.round(priorNetPerPeriod * priorPeriods * 100) / 100;
+  let ytdTax = Math.round(priorTaxPerPeriod * priorPeriods * 100) / 100;
+  let ytdSuper = Math.round(priorSuperPerPeriod * priorPeriods * 100) / 100;
+  const ytdEarnings: Record<string, number> = {};
+  const ytdDeductions: Record<string, number> = {};
+
+  const baseKey = config.payConfig.basis === 'salary' ? 'Base Salary' : 'Ordinary Hours';
+  const priorBasePerPeriod = priorGrossPerPeriod - priorAllowancesPerPeriod;
+  ytdEarnings[baseKey] = Math.round(priorBasePerPeriod * priorPeriods * 100) / 100;
+
+  for (const allowance of config.allowances) {
+    let amount = allowance.fixedAmount;
+    if (allowance.hours > 0 && config.payConfig.basis === 'hourly') {
+      amount = allowance.hours * config.payConfig.hourlyRate * allowance.multiplier;
+    }
+    amount = Math.round(amount * 100) / 100;
+    const key = allowance.description || 'Allowance';
+    ytdEarnings[key] = Math.round(amount * priorPeriods * 100) / 100;
+  }
+
+  const taxKey = 'PAYG Withholding';
+  ytdDeductions[taxKey] = Math.round(priorTaxPerPeriod * priorPeriods * 100) / 100;
+  for (const ded of config.deductions) {
+    const key = ded.description || 'Deduction';
+    ytdDeductions[key] = Math.round(ded.amountPerPeriod * priorPeriods * 100) / 100;
+  }
+
+  let annualLeaveBalance = Math.round(annualLeavePerPeriod * priorPeriods * 100) / 100;
+  let personalLeaveBalance = Math.round(personalLeavePerPeriod * priorPeriods * 100) / 100;
+  let longServiceLeaveBalance = Math.round(lslPerPeriod * priorPeriods * 100) / 100;
+  let ytdAnnualAccrued = annualLeaveBalance;
+  let ytdPersonalAccrued = personalLeaveBalance;
+  let ytdLSLAccrued = longServiceLeaveBalance;
+
+  console.log('[Payslip] FY start:', fyStart.toISOString(), 'Prior periods:', priorPeriods);
 
   return periods.map((period, idx) => {
     const earnings: PayslipEarning[] = [];
