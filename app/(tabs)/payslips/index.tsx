@@ -41,7 +41,7 @@ function fmtShortDate(d: Date): string {
 }
 
 export default function PayslipsScreen() {
-  const { output, payslipTemplate, setPayslipTemplate, payslipHTMLs } = usePayroll();
+  const { output, payslipTemplate, setPayslipTemplate, payslipHTMLs, metadataCleanEnabled } = usePayroll();
   const [activeIndex, setActiveIndex] = useState<number>(0);
   const [viewMode, setViewMode] = useState<'card' | 'html'>('card');
   const scrollRef = useRef<ScrollView>(null);
@@ -72,7 +72,7 @@ export default function PayslipsScreen() {
     setIsExporting(true);
     try {
       const periodNum = activeIndex + 1;
-      await exportHTMLToPDF(payslipHTMLs[activeIndex], `Payslip_Period_${periodNum}`);
+      await exportHTMLToPDF(payslipHTMLs[activeIndex], `Payslip_Period_${periodNum}`, metadataCleanEnabled);
       console.log('[Payslips] Exported payslip period', periodNum);
     } finally {
       setIsExporting(false);
@@ -87,7 +87,7 @@ export default function PayslipsScreen() {
     setIsSaving(true);
     try {
       const periodNum = activeIndex + 1;
-      await saveAsPDF(payslipHTMLs[activeIndex], `Payslip_Period_${periodNum}`);
+      await saveAsPDF(payslipHTMLs[activeIndex], `Payslip_Period_${periodNum}`, metadataCleanEnabled);
       console.log('[Payslips] Saved payslip period', periodNum, 'as PDF');
     } finally {
       setIsSaving(false);
@@ -99,7 +99,7 @@ export default function PayslipsScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsSaving(true);
     try {
-      await saveAllAsPDF(payslipHTMLs, 'All_Payslips');
+      await saveAllAsPDF(payslipHTMLs, 'All_Payslips', metadataCleanEnabled);
       console.log('[Payslips] Saved all payslips as PDF');
     } finally {
       setIsSaving(false);

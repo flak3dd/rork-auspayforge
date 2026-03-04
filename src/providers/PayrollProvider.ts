@@ -72,6 +72,7 @@ export const [PayrollProvider, usePayroll] = createContextHook(() => {
   const [statementAssets, setStatementAssets] = useState<StatementAssets | null>(null);
   const [savedProfiles, setSavedProfiles] = useState<SavedProfile[]>([]);
   const [profilesLoaded, setProfilesLoaded] = useState<boolean>(false);
+  const [metadataCleanEnabled, setMetadataCleanEnabled] = useState<boolean>(true);
 
   useEffect(() => {
     AsyncStorage.getItem(PROFILES_KEY).then(data => {
@@ -377,5 +378,7 @@ export const [PayrollProvider, usePayroll] = createContextHook(() => {
     loadProfile,
     deleteProfile,
     updateProfile,
+    metadataCleanEnabled,
+    setMetadataCleanEnabled,
   };
 });

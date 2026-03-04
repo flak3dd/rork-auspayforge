@@ -17,7 +17,7 @@ function fmt(n: number): string {
 }
 
 export default function PreviewScreen() {
-  const { output, statementHTML } = usePayroll();
+  const { output, statementHTML, metadataCleanEnabled } = usePayroll();
   const [viewMode, setViewMode] = useState<'html' | 'summary'>('html');
 
   const statement = output?.bankStatement;
@@ -29,7 +29,7 @@ export default function PreviewScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsExporting(true);
     try {
-      await exportHTMLToPDF(statementHTML, 'Bank_Statement');
+      await exportHTMLToPDF(statementHTML, 'Bank_Statement', metadataCleanEnabled);
       console.log('[Preview] Statement exported');
     } finally {
       setIsExporting(false);

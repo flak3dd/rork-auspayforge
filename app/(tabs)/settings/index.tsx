@@ -8,6 +8,7 @@ import {
   Alert,
   Animated,
   TextInput,
+  Switch,
 } from 'react-native';
 import {
   Info,
@@ -18,6 +19,7 @@ import {
   Trash2,
   ChevronRight,
   Zap,
+  FileCheck,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
@@ -82,7 +84,7 @@ function SettingRow({
 }
 
 export default function SettingsScreen() {
-  const { resetConfig } = usePayroll();
+  const { resetConfig, metadataCleanEnabled, setMetadataCleanEnabled } = usePayroll();
 
   const handleReset = () => {
     Alert.alert('Reset Configuration', 'This will reset all payroll config to defaults.', [
@@ -136,6 +138,31 @@ export default function SettingsScreen() {
           label="SG Rate"
           value="12%"
         />
+      </View>
+
+      <View style={styles.section}>
+        <View style={styles.sectionTitleRow}>
+          <View style={[styles.sectionAccent, { backgroundColor: Colors.teal }]} />
+          <Text style={[styles.sectionTitle, { color: Colors.teal }]}>EXPORT</Text>
+        </View>
+        <View style={styles.row}>
+          <View style={styles.rowIcon}>
+            <FileCheck size={18} color={Colors.teal} />
+          </View>
+          <View style={styles.rowBody}>
+            <Text style={styles.rowLabel}>Metadata Clean</Text>
+            <Text style={styles.rowValue}>Injects realistic document metadata into exported PDFs</Text>
+          </View>
+          <Switch
+            value={metadataCleanEnabled}
+            onValueChange={(val) => {
+              setMetadataCleanEnabled(val);
+              Haptics.selectionAsync();
+            }}
+            trackColor={{ false: Colors.inputBg, true: Colors.teal + '80' }}
+            thumbColor={metadataCleanEnabled ? Colors.teal : Colors.textMuted}
+          />
+        </View>
       </View>
 
       <View style={styles.section}>

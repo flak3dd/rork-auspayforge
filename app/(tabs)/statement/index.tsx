@@ -102,7 +102,7 @@ function parseInputToISO(input: string): string | null {
 }
 
 export default function StatementScreen() {
-  const { output, statementHTML, config, regenerateStatement } = usePayroll();
+  const { output, statementHTML, config, regenerateStatement, metadataCleanEnabled } = usePayroll();
   const [viewMode, setViewMode] = useState<'overview' | 'document'>('overview');
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [showPayDates, setShowPayDates] = useState<boolean>(true);
@@ -190,7 +190,7 @@ export default function StatementScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsExporting(true);
     try {
-      await exportHTMLToPDF(statementHTML, 'Bank_Statement');
+      await exportHTMLToPDF(statementHTML, 'Bank_Statement', metadataCleanEnabled);
       console.log('[Statement] Exported statement');
     } finally {
       setIsExporting(false);
@@ -204,7 +204,7 @@ export default function StatementScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsSaving(true);
     try {
-      await saveAsPDF(statementHTML, 'Bank_Statement');
+      await saveAsPDF(statementHTML, 'Bank_Statement', metadataCleanEnabled);
       console.log('[Statement] Saved statement as PDF');
     } finally {
       setIsSaving(false);

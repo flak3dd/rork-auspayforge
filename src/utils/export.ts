@@ -1,6 +1,7 @@
 import { Platform, Alert } from 'react-native';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import { injectMetadataIntoHTML } from '@/utils/metadata';
 
 async function generatePDFUri(html: string): Promise<string> {
   const { uri } = await Print.printToFileAsync({
@@ -28,8 +29,9 @@ function webDownloadPDF(html: string, filename: string): void {
   }
 }
 
-export async function saveAsPDF(html: string, filename: string): Promise<void> {
-  console.log('[Export] Save as PDF for:', filename);
+export async function saveAsPDF(html: string, filename: string, metadataClean: boolean = false): Promise<void> {
+  console.log('[Export] Save as PDF for:', filename, '| metadata:', metadataClean);
+  html = injectMetadataIntoHTML(html, metadataClean);
 
   if (Platform.OS === 'web') {
     webDownloadPDF(html, filename);
@@ -80,8 +82,9 @@ export async function saveAsPDF(html: string, filename: string): Promise<void> {
   }
 }
 
-export async function exportHTMLToPDF(html: string, filename: string): Promise<void> {
-  console.log('[Export] Starting export for:', filename);
+export async function exportHTMLToPDF(html: string, filename: string, metadataClean: boolean = false): Promise<void> {
+  console.log('[Export] Starting export for:', filename, '| metadata:', metadataClean);
+  html = injectMetadataIntoHTML(html, metadataClean);
 
   if (Platform.OS === 'web') {
     webDownloadPDF(html, filename);
@@ -112,12 +115,12 @@ export async function exportHTMLToPDF(html: string, filename: string): Promise<v
   }
 }
 
-export async function saveAllAsPDF(htmls: string[], filename: string): Promise<void> {
+export async function saveAllAsPDF(htmls: string[], filename: string, metadataClean: boolean = false): Promise<void> {
   console.log('[Export] Save all as PDF, count:', htmls.length);
   if (htmls.length === 0) return;
 
   const combinedHTML = buildCombinedHTML(htmls);
-  await saveAsPDF(combinedHTML, filename);
+  await saveAsPDF(combinedHTML, filename, metadataClean);
 }
 
 function buildCombinedHTML(htmls: string[]): string {
@@ -143,7 +146,7 @@ ${htmls.map((h, i) => {
 </html>`;
 }
 
-export async function exportBatchPDF(payslipHTMLs: string[], statementHTML: string, filename: string): Promise<void> {
+export async function exportBatchPDF(payslipHTMLs: string[], statementHTML: string, filename: string, metadataClean: boolean = false): Promise<void> {
   console.log('[Export] Batch export - payslips:', payslipHTMLs.length, '+ statement');
   const allHTMLs = [...payslipHTMLs];
   if (statementHTML) {
@@ -154,7 +157,7 @@ export async function exportBatchPDF(payslipHTMLs: string[], statementHTML: stri
   if (Platform.OS === 'web') {
     const combined = allHTMLs.join('<div style="page-break-before: always;"></div>');
     const wrappedHTML = `<!DOCTYPE html><html><head><style>@page{margin:0;}</style></head><body>${combined}</body></html>`;
-    await exportHTMLToPDF(wrappedHTML, filename);
+    await exportHTMLToPDF(wrappedHTML, filename, metadataClean);
     return;
   }
 
@@ -178,21 +181,21 @@ ${allHTMLs.map((h, i) => {
 </body>
 </html>`;
 
-  await exportHTMLToPDF(combinedHTML, filename);
+  await exportHTMLToPDF(combinedHTML, filename, metadataClean);
 }
 
-export async function exportAllPayslips(htmls: string[], baseFilename: string): Promise<void> {
+export async function exportAllPayslips(htmls: string[], baseFilename: string, metadataClean: boolean = false): Promise<void> {
   console.log('[Export] Exporting all payslips, count:', htmls.length);
 
   if (Platform.OS === 'web') {
     const combined = htmls.join('<div style="page-break-before: always;"></div>');
     const wrappedHTML = `<!DOCTYPE html><html><head><style>@page{margin:0;}</style></head><body>${combined}</body></html>`;
-    await exportHTMLToPDF(wrappedHTML, baseFilename);
+    await exportHTMLToPDF(wrappedHTML, baseFilename, metadataClean);
     return;
   }
 
   if (htmls.length === 1) {
-    await exportHTMLToPDF(htmls[0], baseFilename);
+    await exportHTMLToPDF(htmls[0], baseFilename, metadataClean);
     return;
   }
 
@@ -216,5 +219,5 @@ ${htmls.map((h, i) => {
 </body>
 </html>`;
 
-  await exportHTMLToPDF(combinedHTML, baseFilename);
+  await exportHTMLToPDF(combinedHTML, baseFilename, metadataClean);
 }
