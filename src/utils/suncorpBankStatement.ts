@@ -1,4 +1,5 @@
 import { AppConfig, BankStatement, BankTransaction, Payslip } from '@/types/payroll';
+import { isWeekend, nextBusinessDay, getMerchantWeight, getATMWeight, getTransferWeight } from './businessDay';
 
 function addDays(date: Date, days: number): Date {
   const d = new Date(date);
@@ -300,19 +301,33 @@ export function generateSuncorpBankStatement(config: AppConfig, payslips: Paysli
     }
 
     if (paymentDates.has(dateKey)) {
-      const amount = paymentDates.get(dateKey)!;
-      balance = Math.round((balance + amount) * 100) / 100;
-      const ref = generateRefCode(rand, 10);
-      txs.push({
-        date: new Date(current),
-        description: `DIRECT CREDIT ${config.employer.name.toUpperCase()}\nSALARY ${ref}`,
-        credit: amount,
-        debit: 0,
-        balance,
-      });
+      if (!isWeekend(current)) {
+        const amount = paymentDates.get(dateKey)!;
+        balance = Math.round((balance + amount) * 100) / 100;
+        const ref = generateRefCode(rand, 10);
+        txs.push({
+          date: new Date(current),
+          description: `DIRECT CREDIT ${config.employer.name.toUpperCase()}\nSALARY ${ref}`,
+          credit: amount,
+          debit: 0,
+          balance,
+        });
+      } else {
+        const shifted = nextBusinessDay(current);
+        const shiftedKey = shifted.toISOString().split('T')[0];
+        if (!paymentDates.has(shiftedKey)) {
+          paymentDates.set(shiftedKey, paymentDates.get(dateKey)!);
+          console.log('[SuncorpStatement] Shifted weekend salary from', dateKey, 'to', shiftedKey);
+        }
+      }
     }
 
-    if (bc.includeTransfers && rand() < 0.72 * densityMultiplier * (creditBias * 1.6 + 0.2)) {
+    const dayOfWeek = current.getDay();
+    const merchantW = getMerchantWeight(dayOfWeek);
+    const atmW = getATMWeight(dayOfWeek);
+    const transferW = getTransferWeight(dayOfWeek);
+
+    if (bc.includeTransfers && rand() < 0.72 * densityMultiplier * (creditBias * 1.6 + 0.2) * transferW) {
       const count = Math.floor(rand() * Math.max(1, Math.round(4 * (creditBias * 1.4 + 0.3)))) + 1;
       for (let j = 0; j < count; j++) {
         const range = transferMax - transferMin;
@@ -330,7 +345,7 @@ export function generateSuncorpBankStatement(config: AppConfig, payslips: Paysli
       }
     }
 
-    if (bc.includeTransfers && rand() < 0.3 * densityMultiplier * (creditBias * 1.6 + 0.2)) {
+    if (bc.includeTransfers && rand() < 0.3 * densityMultiplier * (creditBias * 1.6 + 0.2) * transferW) {
       const amount = Math.round((rand() * 800 + 200) * 100) / 100;
       const acc = pick(SUNCORP_TRANSFER_ACCOUNTS, rand);
       balance = Math.round((balance + amount) * 100) / 100;
@@ -343,14 +358,16 @@ export function generateSuncorpBankStatement(config: AppConfig, payslips: Paysli
       });
     }
 
-    if (rand() < 0.76 * densityMultiplier * (debitBias * 1.6 + 0.2)) {
+    if (rand() < 0.76 * densityMultiplier * (debitBias * 1.6 + 0.2) * merchantW) {
       const count = Math.floor(rand() * Math.max(1, Math.round(3 * (debitBias * 1.4 + 0.3)))) + 1;
       for (let j = 0; j < count; j++) {
         const category = pick(MERCHANT_CATEGORIES, rand);
         const merchant = pick(MERCHANTS[category], rand);
         const spendRange = spendMax - spendMin;
         const amount = Math.round((rand() * spendRange + spendMin) * 100) / 100;
-        balance = Math.round((balance - amount) * 100) / 100;
+        if (balance - amount >= 0.01) {
+          balance = Math.round((balance - amount) * 100) / 100;
+        }
         txs.push({
           date: new Date(current),
           description: merchant,
@@ -361,11 +378,13 @@ export function generateSuncorpBankStatement(config: AppConfig, payslips: Paysli
       }
     }
 
-    if (bc.includeATM && rand() < 0.19 * densityMultiplier * (debitBias * 1.6 + 0.2)) {
+    if (bc.includeATM && rand() < 0.19 * densityMultiplier * (debitBias * 1.6 + 0.2) * atmW) {
       const amounts = [20, 40, 50, 60, 80, 100, 150, 200, 250, 300];
       const amount = pick(amounts, rand);
       const location = pick(ATM_LOCATIONS, rand);
-      balance = Math.round((balance - amount) * 100) / 100;
+      if (balance - amount >= 0.01) {
+        balance = Math.round((balance - amount) * 100) / 100;
+      }
       txs.push({
         date: new Date(current),
         description: location,
@@ -375,11 +394,13 @@ export function generateSuncorpBankStatement(config: AppConfig, payslips: Paysli
       });
     }
 
-    if (bc.includeTransfers && rand() < 0.3 * densityMultiplier * (debitBias * 1.6 + 0.2)) {
+    if (bc.includeTransfers && rand() < 0.3 * densityMultiplier * (debitBias * 1.6 + 0.2) * transferW) {
       const amount = Math.round((rand() * 250 + 50) * 100) / 100;
       const recipient = pick(SUNCORP_RECIPIENTS, rand);
       const memo = pick(SUNCORP_TRANSFER_MEMOS, rand);
-      balance = Math.round((balance - amount) * 100) / 100;
+      if (balance - amount >= 0.01) {
+        balance = Math.round((balance - amount) * 100) / 100;
+      }
       txs.push({
         date: new Date(current),
         description: `OSKO PAYMENT TO ${recipient}\n${memo}`,
@@ -597,7 +618,7 @@ export function generateSuncorpBankStatement(config: AppConfig, payslips: Paysli
 
   return {
     bankName: 'Suncorp-Metway Ltd',
-    accountHolder: config.bankConfig.holderName,
+    accountHolder: config.bankConfig.holderName.toUpperCase(),
     bsb: bsbFormatted,
     accountNumber: config.bankConfig.accountNumber,
     statementPeriod: `${formatDate(spanStart)} - ${formatDate(spanEnd)}`,

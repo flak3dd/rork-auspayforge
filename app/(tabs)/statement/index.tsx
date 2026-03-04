@@ -441,6 +441,38 @@ export default function StatementScreen() {
               </View>
             </TouchableOpacity>
           </View>
+          <View style={styles.templatePicker}>
+            {[
+              { key: 'nab' as const, label: 'NAB', desc: 'Classic Banking', color: '#C8102E' },
+              { key: 'anz' as const, label: 'ANZ', desc: 'Access Advantage', color: '#003366' },
+              { key: 'westpac' as const, label: 'Westpac', desc: 'Westpac Choice', color: '#D5002B' },
+            ].map(bank => (
+              <TouchableOpacity
+                key={bank.key}
+                style={[
+                  styles.templateOption,
+                  statementTemplate === bank.key && styles.templateOptionActive,
+                ]}
+                onPress={() => {
+                  setStatementTemplate(bank.key);
+                  Haptics.selectionAsync();
+                }}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.templateDot, { backgroundColor: bank.color }]} />
+                <View style={styles.templateOptionContent}>
+                  <Text style={[
+                    styles.templateOptionLabel,
+                    statementTemplate === bank.key && styles.templateOptionLabelActive,
+                  ]}>{bank.label}</Text>
+                  <Text style={[
+                    styles.templateOptionDesc,
+                    statementTemplate === bank.key && styles.templateOptionDescActive,
+                  ]}>{bank.desc}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
       </View>
 

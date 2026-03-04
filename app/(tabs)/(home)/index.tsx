@@ -161,7 +161,7 @@ export default function HomeScreen() {
           <View style={[styles.statAccent, { backgroundColor: Colors.gold }]} />
           <View style={styles.statContent}>
             <Zap size={15} color={Colors.gold} />
-            <Text style={styles.statValue}>4</Text>
+            <Text style={styles.statValue}>{config.payConfig.numberOfPayslips ?? 4}</Text>
             <Text style={styles.statLabel}>Periods</Text>
           </View>
         </View>
@@ -207,7 +207,7 @@ export default function HomeScreen() {
                 </View>
                 <View style={styles.forgeCardHeaderText}>
                   <Text style={styles.forgeCardTitle}>Payslips</Text>
-                  <Text style={styles.forgeCardDesc}>Generate 4 consecutive pay period slips</Text>
+                  <Text style={styles.forgeCardDesc}>Generate {config.payConfig.numberOfPayslips ?? 4} consecutive pay period slips</Text>
                 </View>
               </View>
 

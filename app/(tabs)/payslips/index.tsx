@@ -13,7 +13,7 @@ import Colors from '@/constants/colors';
 import { usePayroll, PayslipTemplateType } from '@/providers/PayrollProvider';
 import PayslipCard from '@/components/PayslipCard';
 import HTMLRenderer from '@/components/HTMLRenderer';
-import { exportHTMLToPDF, exportAllPayslips } from '@/utils/export';
+import { exportHTMLToPDF, exportAllPayslips, exportBatchPDF } from '@/utils/export';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -90,6 +90,20 @@ export default function PayslipsScreen() {
       setIsExporting(false);
     }
   }, [payslipHTMLs, isExporting]);
+
+  const { statementHTML } = usePayroll();
+
+  const handleBatchExport = useCallback(async () => {
+    if ((payslipHTMLs.length === 0 && !statementHTML) || isExporting) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setIsExporting(true);
+    try {
+      await exportBatchPDF(payslipHTMLs, statementHTML, 'Payslips_And_Statement');
+      console.log('[Payslips] Batch exported payslips + statement');
+    } finally {
+      setIsExporting(false);
+    }
+  }, [payslipHTMLs, statementHTML, isExporting]);
 
   const handleTemplateSwitch = useCallback((template: PayslipTemplateType) => {
     if (template === payslipTemplate) return;
@@ -252,6 +266,15 @@ export default function PayslipsScreen() {
           >
             <Share2 size={15} color={Colors.accent} />
             <Text style={styles.exportPillText}>{isExporting ? 'Exporting...' : 'All Slips'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.exportPill}
+            onPress={handleBatchExport}
+            activeOpacity={0.7}
+            disabled={isExporting}
+          >
+            <Download size={15} color={Colors.accent} />
+            <Text style={styles.exportPillText}>{isExporting ? '...' : 'All + Stmt'}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.exportPill}

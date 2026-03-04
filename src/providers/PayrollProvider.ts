@@ -1,5 +1,6 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import createContextHook from '@nkzw/create-context-hook';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   AppConfig,
   DEFAULT_CONFIG,
@@ -7,10 +8,12 @@ import {
   Payslip,
   BankStatement,
   BankConfig,
+  SavedProfile,
 } from '@/types/payroll';
 import { generatePayslips } from '@/utils/payslip';
 import { generateBankStatement } from '@/utils/bankStatement';
 import { generateSuncorpBankStatement } from '@/utils/suncorpBankStatement';
+import { generateGenericBankStatement, getProfileByKey } from '@/utils/genericBankStatement';
 import { isConfigValid } from '@/utils/validation';
 import { generateGeneralPayslipHTML } from '@/lib/templates/generalPayslipTemplate';
 import { generateConstructionPayslipHTML } from '@/lib/templates/constructionPayslipTemplate';
@@ -18,17 +21,29 @@ import { generateAdminFortnightlyPayslipHTML } from '@/lib/templates/adminFortni
 import { generateExecutiveMonthlyPayslipHTML } from '@/lib/templates/executiveMonthlyPayslipTemplate';
 import { generateStatementHTML, StatementAssets } from '@/utils/statementHTML';
 import { generateSuncorpStatementHTML } from '@/utils/suncorpStatementHTML';
+import { generateGenericStatementHTML } from '@/utils/genericBankHTML';
 import { loadStatementAssets } from '@/utils/assetLoader';
 
 export type PayslipTemplateType = 'general' | 'construction' | 'admin' | 'executive';
 
+const PROFILES_KEY = 'auspayforge-profiles';
+
 function pickStatementGenerator(template: string) {
   if (template === 'suncorp') return generateSuncorpStatementHTML;
+  if (template === 'nab' || template === 'anz' || template === 'westpac') {
+    return (statement: BankStatement, config: AppConfig, assets?: StatementAssets) =>
+      generateGenericStatementHTML(statement, config, template, assets);
+  }
   return generateStatementHTML;
 }
 
 function pickTransactionGenerator(template: string) {
   if (template === 'suncorp') return generateSuncorpBankStatement;
+  if (template === 'nab' || template === 'anz' || template === 'westpac') {
+    const profile = getProfileByKey(template);
+    return (config: AppConfig, payslips: Payslip[]) =>
+      generateGenericBankStatement(config, payslips, profile);
+  }
   return generateBankStatement;
 }
 
@@ -55,6 +70,68 @@ export const [PayrollProvider, usePayroll] = createContextHook(() => {
   const [payslipHTMLs, setPayslipHTMLs] = useState<string[]>([]);
   const [statementHTML, setStatementHTML] = useState<string>('');
   const [statementAssets, setStatementAssets] = useState<StatementAssets | null>(null);
+  const [savedProfiles, setSavedProfiles] = useState<SavedProfile[]>([]);
+  const [profilesLoaded, setProfilesLoaded] = useState<boolean>(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem(PROFILES_KEY).then(data => {
+      if (data) {
+        try {
+          setSavedProfiles(JSON.parse(data));
+        } catch (e) {
+          console.error('[PayrollProvider] Failed to parse profiles:', e);
+        }
+      }
+      setProfilesLoaded(true);
+      console.log('[PayrollProvider] Profiles loaded');
+    });
+  }, []);
+
+  const persistProfiles = useCallback((profiles: SavedProfile[]) => {
+    setSavedProfiles(profiles);
+    AsyncStorage.setItem(PROFILES_KEY, JSON.stringify(profiles)).catch(e => {
+      console.error('[PayrollProvider] Failed to persist profiles:', e);
+    });
+  }, []);
+
+  const saveProfile = useCallback((name: string) => {
+    const profile: SavedProfile = {
+      id: 'prof_' + Date.now().toString(36),
+      name,
+      config: { ...config },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    const updated = [profile, ...savedProfiles].slice(0, 20);
+    persistProfiles(updated);
+    console.log('[PayrollProvider] Saved profile:', name);
+    return profile.id;
+  }, [config, savedProfiles, persistProfiles]);
+
+  const loadProfile = useCallback((id: string) => {
+    const profile = savedProfiles.find(p => p.id === id);
+    if (profile) {
+      setConfig(profile.config);
+      setOutput(null);
+      setPayslipHTMLs([]);
+      setStatementHTML('');
+      console.log('[PayrollProvider] Loaded profile:', profile.name);
+    }
+  }, [savedProfiles]);
+
+  const deleteProfile = useCallback((id: string) => {
+    const updated = savedProfiles.filter(p => p.id !== id);
+    persistProfiles(updated);
+    console.log('[PayrollProvider] Deleted profile:', id);
+  }, [savedProfiles, persistProfiles]);
+
+  const updateProfile = useCallback((id: string) => {
+    const updated = savedProfiles.map(p =>
+      p.id === id ? { ...p, config: { ...config }, updatedAt: new Date().toISOString() } : p
+    );
+    persistProfiles(updated);
+    console.log('[PayrollProvider] Updated profile:', id);
+  }, [config, savedProfiles, persistProfiles]);
 
   const validation = useMemo(() => isConfigValid(config), [config]);
 
@@ -295,5 +372,10 @@ export const [PayrollProvider, usePayroll] = createContextHook(() => {
     payslipHTMLs,
     statementHTML,
     regenerateStatement,
+    savedProfiles,
+    saveProfile,
+    loadProfile,
+    deleteProfile,
+    updateProfile,
   };
 });

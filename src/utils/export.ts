@@ -49,6 +49,44 @@ export async function exportHTMLToPDF(html: string, filename: string): Promise<v
   }
 }
 
+export async function exportBatchPDF(payslipHTMLs: string[], statementHTML: string, filename: string): Promise<void> {
+  console.log('[Export] Batch export - payslips:', payslipHTMLs.length, '+ statement');
+  const allHTMLs = [...payslipHTMLs];
+  if (statementHTML) {
+    allHTMLs.push(statementHTML);
+  }
+  if (allHTMLs.length === 0) return;
+
+  if (Platform.OS === 'web') {
+    const combined = allHTMLs.join('<div style="page-break-before: always;"></div>');
+    const wrappedHTML = `<!DOCTYPE html><html><head><style>@page{margin:0;}</style></head><body>${combined}</body></html>`;
+    await exportHTMLToPDF(wrappedHTML, filename);
+    return;
+  }
+
+  const combinedHTML = `
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+@page { margin: 0; }
+.page-break { page-break-before: always; }
+</style>
+</head>
+<body>
+${allHTMLs.map((h, i) => {
+    const bodyMatch = h.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+    const content = bodyMatch ? bodyMatch[1] : h;
+    const styleMatch = h.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
+    const styles = styleMatch ? `<style>${styleMatch[1]}</style>` : '';
+    return `${i > 0 ? '<div class="page-break"></div>' : ''}${styles}${content}`;
+  }).join('\n')}
+</body>
+</html>`;
+
+  await exportHTMLToPDF(combinedHTML, filename);
+}
+
 export async function exportAllPayslips(htmls: string[], baseFilename: string): Promise<void> {
   console.log('[Export] Exporting all payslips, count:', htmls.length);
 

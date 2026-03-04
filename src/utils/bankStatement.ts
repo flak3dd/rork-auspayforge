@@ -1,4 +1,5 @@
 import { AppConfig, BankStatement, BankTransaction, Payslip } from '@/types/payroll';
+import { isWeekend, nextBusinessDay, getMerchantWeight, getATMWeight, getTransferWeight } from './businessDay';
 
 function addDays(date: Date, days: number): Date {
   const d = new Date(date);
@@ -252,7 +253,7 @@ export function generateBankStatement(config: AppConfig, payslips: Payslip[]): B
       console.log('[BankStatement] Added ' + label + ' payment on ' + dateKey + ' for $' + mrAmount.toFixed(2));
     }
 
-    if (bc.includePension && (current.getDay() === 5 || current.getDate() === 8 || current.getDate() === 22)) {
+    if (bc.includePension && !isWeekend(current) && (current.getDay() === 5 || current.getDate() === 8 || current.getDate() === 22)) {
       const income = Math.round((rand() * 560 + 820) * 100) / 100;
       const code = generatePensionCode(rand);
       balance = Math.round((balance + income) * 100) / 100;
@@ -266,18 +267,32 @@ export function generateBankStatement(config: AppConfig, payslips: Payslip[]): B
     }
 
     if (paymentDates.has(dateKey)) {
-      const amount = paymentDates.get(dateKey)!;
-      balance = Math.round((balance + amount) * 100) / 100;
-      txs.push({
-        date: new Date(current),
-        description: `Direct Credit ${config.employer.name.toUpperCase()} Salary/Wages`,
-        credit: amount,
-        debit: 0,
-        balance,
-      });
+      if (!isWeekend(current)) {
+        const amount = paymentDates.get(dateKey)!;
+        balance = Math.round((balance + amount) * 100) / 100;
+        txs.push({
+          date: new Date(current),
+          description: `Direct Credit ${config.employer.name.toUpperCase()} Salary/Wages`,
+          credit: amount,
+          debit: 0,
+          balance,
+        });
+      } else {
+        const shifted = nextBusinessDay(current);
+        const shiftedKey = shifted.toISOString().split('T')[0];
+        if (!paymentDates.has(shiftedKey)) {
+          paymentDates.set(shiftedKey, paymentDates.get(dateKey)!);
+          console.log('[BankStatement] Shifted weekend salary from', dateKey, 'to', shiftedKey);
+        }
+      }
     }
 
-    if (bc.includeTransfers && rand() < 0.72 * densityMultiplier * (creditBias * 1.6 + 0.2)) {
+    const dayOfWeek = current.getDay();
+    const merchantW = getMerchantWeight(dayOfWeek);
+    const atmW = getATMWeight(dayOfWeek);
+    const transferW = getTransferWeight(dayOfWeek);
+
+    if (bc.includeTransfers && rand() < 0.72 * densityMultiplier * (creditBias * 1.6 + 0.2) * transferW) {
       const count = Math.floor(rand() * Math.max(1, Math.round(4 * (creditBias * 1.4 + 0.3)))) + 1;
       for (let j = 0; j < count; j++) {
         const range = transferMax - transferMin;
@@ -295,7 +310,7 @@ export function generateBankStatement(config: AppConfig, payslips: Payslip[]): B
       }
     }
 
-    if (bc.includeTransfers && rand() < 0.3 * densityMultiplier * (creditBias * 1.6 + 0.2)) {
+    if (bc.includeTransfers && rand() < 0.3 * densityMultiplier * (creditBias * 1.6 + 0.2) * transferW) {
       const amount = Math.round((rand() * 800 + 200) * 100) / 100;
       const acc = pick(TRANSFER_ACCOUNTS, rand);
       balance = Math.round((balance + amount) * 100) / 100;
@@ -308,7 +323,7 @@ export function generateBankStatement(config: AppConfig, payslips: Payslip[]): B
       });
     }
 
-    if (rand() < 0.76 * densityMultiplier * (debitBias * 1.6 + 0.2)) {
+    if (rand() < 0.76 * densityMultiplier * (debitBias * 1.6 + 0.2) * merchantW) {
       const count = Math.floor(rand() * Math.max(1, Math.round(3 * (debitBias * 1.4 + 0.3)))) + 1;
       for (let j = 0; j < count; j++) {
         const category = pick(MERCHANT_CATEGORIES, rand);
@@ -327,22 +342,26 @@ export function generateBankStatement(config: AppConfig, payslips: Payslip[]): B
           const suburb = pick(suburbs, rand);
           desc = `${merchant} ${suburb} QLD AUS\nCard xx1043\nValue Date: ${formatDateSlash(priorDate)}`;
         }
-        balance = Math.round((balance - amount) * 100) / 100;
-        txs.push({
-          date: new Date(current),
-          description: desc,
-          credit: 0,
-          debit: amount,
-          balance,
-        });
+        if (balance - amount >= 0.01) {
+          balance = Math.round((balance - amount) * 100) / 100;
+          txs.push({
+            date: new Date(current),
+            description: desc,
+            credit: 0,
+            debit: amount,
+            balance,
+          });
+        }
       }
     }
 
-    if (bc.includeATM && rand() < 0.19 * densityMultiplier * (debitBias * 1.6 + 0.2)) {
+    if (bc.includeATM && rand() < 0.19 * densityMultiplier * (debitBias * 1.6 + 0.2) * atmW) {
       const amounts = [20, 40, 50, 60, 80, 100, 150, 200, 250, 300];
       const amount = pick(amounts, rand);
       const location = pick(ATM_LOCATIONS, rand);
-      balance = Math.round((balance - amount) * 100) / 100;
+      if (balance - amount >= 0.01) {
+        balance = Math.round((balance - amount) * 100) / 100;
+      }
       txs.push({
         date: new Date(current),
         description: `Wdl ATM ${location}`,
@@ -352,11 +371,13 @@ export function generateBankStatement(config: AppConfig, payslips: Payslip[]): B
       });
     }
 
-    if (bc.includeTransfers && rand() < 0.3 * densityMultiplier * (debitBias * 1.6 + 0.2)) {
+    if (bc.includeTransfers && rand() < 0.3 * densityMultiplier * (debitBias * 1.6 + 0.2) * transferW) {
       const amount = Math.round((rand() * 250 + 50) * 100) / 100;
       const recipient = pick(RECIPIENTS, rand);
       const memo = pick(INCOMING_MEMOS, rand);
-      balance = Math.round((balance - amount) * 100) / 100;
+      if (balance - amount >= 0.01) {
+        balance = Math.round((balance - amount) * 100) / 100;
+      }
       txs.push({
         date: new Date(current),
         description: `Transfer To ${recipient}\nPayID Phone from CommBank App\n${memo}`,
@@ -583,7 +604,7 @@ export function generateBankStatement(config: AppConfig, payslips: Payslip[]): B
 
   return {
     bankName: 'Commonwealth Bank of Australia',
-    accountHolder: config.bankConfig.holderName,
+    accountHolder: config.bankConfig.holderName.toUpperCase(),
     bsb: bsbFormatted,
     accountNumber: config.bankConfig.accountNumber,
     statementPeriod: `${formatDate(spanStart)} - ${formatDate(spanEnd)}`,

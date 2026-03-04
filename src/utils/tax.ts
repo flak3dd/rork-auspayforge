@@ -1,4 +1,6 @@
-export function calculatePAYG(annualIncome: number): number {
+import { HECS_BRACKETS_2025 } from '@/types/payroll';
+
+export function calculatePAYGOnly(annualIncome: number): number {
   const brackets: { min: number; max: number; rate: number; base: number }[] = [
     { min: 0, max: 18200, rate: 0, base: 0 },
     { min: 18201, max: 45000, rate: 0.16, base: 0 },
@@ -16,9 +18,28 @@ export function calculatePAYG(annualIncome: number): number {
       }
     }
   }
+  return Math.floor(tax);
+}
 
-  const medicare = annualIncome * 0.02;
-  return Math.floor(tax + medicare);
+export function calculateMedicare(annualIncome: number): number {
+  if (annualIncome <= 26000) return 0;
+  if (annualIncome <= 32500) {
+    return Math.round((annualIncome - 26000) * 0.10);
+  }
+  return Math.round(annualIncome * 0.02);
+}
+
+export function calculateHECS(annualIncome: number): number {
+  for (const bracket of HECS_BRACKETS_2025) {
+    if (annualIncome >= bracket.min && annualIncome <= bracket.max) {
+      return Math.round(annualIncome * bracket.rate);
+    }
+  }
+  return 0;
+}
+
+export function calculatePAYG(annualIncome: number): number {
+  return calculatePAYGOnly(annualIncome) + calculateMedicare(annualIncome);
 }
 
 export function periodsPerYear(frequency: 'weekly' | 'fortnightly' | 'monthly'): number {
@@ -32,4 +53,19 @@ export function periodsPerYear(frequency: 'weekly' | 'fortnightly' | 'monthly'):
 export function calculatePeriodTax(annualIncome: number, frequency: 'weekly' | 'fortnightly' | 'monthly'): number {
   const annualTax = calculatePAYG(annualIncome);
   return Math.round((annualTax / periodsPerYear(frequency)) * 100) / 100;
+}
+
+export function calculatePeriodPAYGOnly(annualIncome: number, frequency: 'weekly' | 'fortnightly' | 'monthly'): number {
+  const annualTax = calculatePAYGOnly(annualIncome);
+  return Math.round((annualTax / periodsPerYear(frequency)) * 100) / 100;
+}
+
+export function calculatePeriodMedicare(annualIncome: number, frequency: 'weekly' | 'fortnightly' | 'monthly'): number {
+  const annualMedicare = calculateMedicare(annualIncome);
+  return Math.round((annualMedicare / periodsPerYear(frequency)) * 100) / 100;
+}
+
+export function calculatePeriodHECS(annualIncome: number, frequency: 'weekly' | 'fortnightly' | 'monthly'): number {
+  const annualHECS = calculateHECS(annualIncome);
+  return Math.round((annualHECS / periodsPerYear(frequency)) * 100) / 100;
 }

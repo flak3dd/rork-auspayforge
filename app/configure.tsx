@@ -29,6 +29,7 @@ import FormField from '@/components/FormField';
 import SectionHeader from '@/components/SectionHeader';
 import { CLASSIFICATIONS } from '@/types/payroll';
 import type { PayBasis, PayFrequency, Deduction, Allowance } from '@/types/payroll';
+import { lookupBSB } from '@/utils/bsbLookup';
 
 export default function ConfigureScreen() {
   const router = useRouter();
@@ -322,9 +323,63 @@ export default function ConfigureScreen() {
               placeholder="2025-07-01"
             />
 
+            <Text style={styles.fieldLabel}>NUMBER OF PAYSLIPS</Text>
+            <View style={styles.freqRow}>
+              {[1, 2, 4, 6, 8, 12].map((n) => (
+                <TouchableOpacity
+                  key={n}
+                  style={[styles.freqBtn, (config.payConfig.numberOfPayslips ?? 4) === n && styles.freqBtnActive]}
+                  onPress={() => {
+                    updateConfig('payConfig', { ...config.payConfig, numberOfPayslips: n });
+                    Haptics.selectionAsync();
+                  }}
+                >
+                  <Text style={[styles.freqText, (config.payConfig.numberOfPayslips ?? 4) === n && styles.freqTextActive]}>
+                    {n}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={styles.toggleRow}>
+              <Text style={styles.toggleLabel}>Separate Medicare Levy</Text>
+              <View style={styles.exactPayRow}>
+                <Switch
+                  value={config.payConfig.includeMedicareSeparate ?? false}
+                  onValueChange={(v) => {
+                    updateConfig('payConfig', { ...config.payConfig, includeMedicareSeparate: v });
+                    Haptics.selectionAsync();
+                  }}
+                  trackColor={{ false: Colors.border, true: Colors.accent + '60' }}
+                  thumbColor={(config.payConfig.includeMedicareSeparate ?? false) ? Colors.accent : Colors.textMuted}
+                />
+                <Text style={styles.exactPayHint}>
+                  {(config.payConfig.includeMedicareSeparate ?? false) ? 'Shown as separate line' : 'Bundled with PAYG'}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.toggleRow}>
+              <Text style={styles.toggleLabel}>HECS-HELP Repayment</Text>
+              <View style={styles.exactPayRow}>
+                <Switch
+                  value={config.payConfig.includeHECS ?? false}
+                  onValueChange={(v) => {
+                    updateConfig('payConfig', { ...config.payConfig, includeHECS: v });
+                    Haptics.selectionAsync();
+                  }}
+                  trackColor={{ false: Colors.border, true: Colors.accent + '60' }}
+                  thumbColor={(config.payConfig.includeHECS ?? false) ? Colors.accent : Colors.textMuted}
+                />
+                <Text style={styles.exactPayHint}>
+                  {(config.payConfig.includeHECS ?? false) ? 'Auto-calculated from income' : 'No HECS deduction'}
+                </Text>
+              </View>
+            </View>
+
             <View style={styles.infoBox}>
               <CalendarDays size={14} color={Colors.accent} />
-              <Text style={styles.infoText}>Fixed: 4 consecutive pay periods will be generated</Text>
+              <Text style={styles.infoText}>{config.payConfig.numberOfPayslips ?? 4} consecutive pay periods will be generated. LTD values auto-calculated from July 1.</Text>
             </View>
           </View>
         )}
@@ -496,6 +551,15 @@ export default function ConfigureScreen() {
                 />
               </View>
             </View>
+            {(() => {
+              const bsbInfo = lookupBSB(config.bankConfig.bsb);
+              return bsbInfo ? (
+                <View style={styles.infoBox}>
+                  <Landmark size={14} color={Colors.gold} />
+                  <Text style={styles.infoText}>Detected: {bsbInfo.bank} ({bsbInfo.abbr})</Text>
+                </View>
+              ) : null;
+            })()}
             <FormField
               label="Account Holder"
               value={config.bankConfig.holderName}

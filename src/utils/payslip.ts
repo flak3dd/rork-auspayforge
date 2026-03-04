@@ -6,7 +6,13 @@ import {
   PayslipDeduction,
   PayslipLeave,
 } from '@/types/payroll';
-import { calculatePeriodTax, periodsPerYear } from './tax';
+import {
+  calculatePeriodTax,
+  calculatePeriodPAYGOnly,
+  calculatePeriodMedicare,
+  calculatePeriodHECS,
+  periodsPerYear,
+} from './tax';
 
 function addDays(date: Date, days: number): Date {
   const d = new Date(date);
@@ -20,11 +26,30 @@ function addMonths(date: Date, months: number): Date {
   return d;
 }
 
+function seededRandom(seed: number): () => number {
+  let s = seed;
+  return () => {
+    s = (s * 1664525 + 1013904223) & 0xffffffff;
+    return (s >>> 0) / 0xffffffff;
+  };
+}
+
+function hashString(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
 function generatePeriods(config: AppConfig): PayslipPeriod[] {
   const periods: PayslipPeriod[] = [];
+  const numPeriods = config.payConfig.numberOfPayslips ?? 4;
   let start = new Date(config.payConfig.startDate);
 
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < numPeriods; i++) {
     let end: Date;
     switch (config.payConfig.frequency) {
       case 'weekly':
@@ -78,9 +103,29 @@ function countPriorPeriods(fyStart: Date, firstPeriodStart: Date, frequency: 'we
   }
 }
 
+function generateRealisticPriorYTD(
+  baseAmount: number,
+  priorPeriods: number,
+  seed: number,
+  variationPct: number = 0.02,
+): number {
+  if (priorPeriods <= 0) return 0;
+  const rand = seededRandom(seed);
+  let total = 0;
+  for (let i = 0; i < priorPeriods; i++) {
+    const variation = 1 + (rand() * 2 - 1) * variationPct;
+    total += Math.round(baseAmount * variation * 100) / 100;
+  }
+  return Math.round(total * 100) / 100;
+}
+
 export function generatePayslips(config: AppConfig): Payslip[] {
   const periods = generatePeriods(config);
   const ppy = periodsPerYear(config.payConfig.frequency);
+  const showMedicareSeparate = config.payConfig.includeMedicareSeparate ?? false;
+  const includeHECS = config.payConfig.includeHECS ?? false;
+  const useExactPay = config.payConfig.useExactPay ?? false;
+  const exactPayPerPeriod = config.payConfig.exactPayPerPeriod ?? 0;
 
   const annualLeavePerPeriod = 152 / ppy;
   const personalLeavePerPeriod = 76 / ppy;
@@ -94,9 +139,11 @@ export function generatePayslips(config: AppConfig): Payslip[] {
     ? config.payConfig.annualSalary
     : config.payConfig.hourlyRate * config.payConfig.weeklyHours * 52;
 
+  const seed = hashString(config.employee.name + config.employee.id + config.employer.abn);
+
   let priorGrossPerPeriod = 0;
-  if (config.payConfig.useExactPay && config.payConfig.exactPayPerPeriod > 0) {
-    priorGrossPerPeriod = Math.round(config.payConfig.exactPayPerPeriod * 100) / 100;
+  if (useExactPay && exactPayPerPeriod > 0) {
+    priorGrossPerPeriod = Math.round(exactPayPerPeriod * 100) / 100;
   } else if (config.payConfig.basis === 'salary') {
     priorGrossPerPeriod = Math.round((config.payConfig.annualSalary / ppy) * 100) / 100;
   } else {
@@ -122,25 +169,40 @@ export function generatePayslips(config: AppConfig): Payslip[] {
 
   const priorOtePerPeriod = priorGrossPerPeriod - priorOvertimePerPeriod;
   const priorAnnualProjection = priorGrossPerPeriod * ppy;
-  const priorTaxPerPeriod = calculatePeriodTax(priorAnnualProjection, config.payConfig.frequency);
+
+  let priorTaxPerPeriod: number;
+  let priorMedicarePerPeriod = 0;
+  let priorHECSPerPeriod = 0;
+
+  if (showMedicareSeparate) {
+    priorTaxPerPeriod = calculatePeriodPAYGOnly(priorAnnualProjection, config.payConfig.frequency);
+    priorMedicarePerPeriod = calculatePeriodMedicare(priorAnnualProjection, config.payConfig.frequency);
+  } else {
+    priorTaxPerPeriod = calculatePeriodTax(priorAnnualProjection, config.payConfig.frequency);
+  }
+
+  if (includeHECS) {
+    priorHECSPerPeriod = calculatePeriodHECS(priorAnnualProjection, config.payConfig.frequency);
+  }
+
   const priorSuperPerPeriod = Math.round(priorOtePerPeriod * 0.115 * 100) / 100;
 
-  let priorDeductionsPerPeriod = priorTaxPerPeriod;
+  let priorDeductionsPerPeriod = priorTaxPerPeriod + priorMedicarePerPeriod + priorHECSPerPeriod;
   for (const ded of config.deductions) {
     priorDeductionsPerPeriod += ded.amountPerPeriod;
   }
   const priorNetPerPeriod = Math.round((priorGrossPerPeriod - priorDeductionsPerPeriod) * 100) / 100;
 
-  let ytdGross = Math.round(priorGrossPerPeriod * priorPeriods * 100) / 100;
-  let ytdNet = Math.round(priorNetPerPeriod * priorPeriods * 100) / 100;
-  let ytdTax = Math.round(priorTaxPerPeriod * priorPeriods * 100) / 100;
-  let ytdSuper = Math.round(priorSuperPerPeriod * priorPeriods * 100) / 100;
+  let ytdGross = generateRealisticPriorYTD(priorGrossPerPeriod, priorPeriods, seed, 0.015);
+  let ytdNet = generateRealisticPriorYTD(priorNetPerPeriod, priorPeriods, seed + 1, 0.015);
+  let ytdTax = generateRealisticPriorYTD(priorTaxPerPeriod, priorPeriods, seed + 2, 0.01);
+  let ytdSuper = generateRealisticPriorYTD(priorSuperPerPeriod, priorPeriods, seed + 3, 0.015);
   const ytdEarnings: Record<string, number> = {};
   const ytdDeductions: Record<string, number> = {};
 
   const baseKey = config.payConfig.basis === 'salary' ? 'Base Salary' : 'Ordinary Hours';
   const priorBasePerPeriod = priorGrossPerPeriod - priorAllowancesPerPeriod;
-  ytdEarnings[baseKey] = Math.round(priorBasePerPeriod * priorPeriods * 100) / 100;
+  ytdEarnings[baseKey] = generateRealisticPriorYTD(priorBasePerPeriod, priorPeriods, seed + 4, 0.01);
 
   for (const allowance of config.allowances) {
     let amount = allowance.fixedAmount;
@@ -149,32 +211,52 @@ export function generatePayslips(config: AppConfig): Payslip[] {
     }
     amount = Math.round(amount * 100) / 100;
     const key = allowance.description || 'Allowance';
-    ytdEarnings[key] = Math.round(amount * priorPeriods * 100) / 100;
+    ytdEarnings[key] = generateRealisticPriorYTD(amount, priorPeriods, seed + hashString(key), 0.03);
   }
 
   const taxKey = 'PAYG Withholding';
-  ytdDeductions[taxKey] = Math.round(priorTaxPerPeriod * priorPeriods * 100) / 100;
+  ytdDeductions[taxKey] = generateRealisticPriorYTD(priorTaxPerPeriod, priorPeriods, seed + 10, 0.01);
+
+  if (showMedicareSeparate) {
+    const medicareKey = 'Medicare Levy';
+    ytdDeductions[medicareKey] = generateRealisticPriorYTD(priorMedicarePerPeriod, priorPeriods, seed + 11, 0.01);
+  }
+
+  if (includeHECS) {
+    const hecsKey = 'HECS-HELP Repayment';
+    ytdDeductions[hecsKey] = generateRealisticPriorYTD(priorHECSPerPeriod, priorPeriods, seed + 12, 0.005);
+  }
+
   for (const ded of config.deductions) {
     const key = ded.description || 'Deduction';
-    ytdDeductions[key] = Math.round(ded.amountPerPeriod * priorPeriods * 100) / 100;
+    ytdDeductions[key] = generateRealisticPriorYTD(ded.amountPerPeriod, priorPeriods, seed + hashString(key), 0.005);
   }
 
   let annualLeaveBalance = Math.round(annualLeavePerPeriod * priorPeriods * 100) / 100;
   let personalLeaveBalance = Math.round(personalLeavePerPeriod * priorPeriods * 100) / 100;
   let longServiceLeaveBalance = Math.round(lslPerPeriod * priorPeriods * 100) / 100;
+
+  const priorRand = seededRandom(seed + 100);
+  if (priorPeriods > 4) {
+    const priorSickDays = Math.floor(priorRand() * Math.min(priorPeriods / 4, 3));
+    personalLeaveBalance -= priorSickDays * 7.6;
+    personalLeaveBalance = Math.max(0, Math.round(personalLeaveBalance * 100) / 100);
+  }
+
   let ytdAnnualAccrued = annualLeaveBalance;
   let ytdPersonalAccrued = personalLeaveBalance;
   let ytdLSLAccrued = longServiceLeaveBalance;
 
-  console.log('[Payslip] FY start:', fyStart.toISOString(), 'Prior periods:', priorPeriods);
+  console.log('[Payslip] FY start:', fyStart.toISOString(), 'Prior periods:', priorPeriods, 'Payslips to generate:', periods.length);
+  console.log('[Payslip] Realistic LTD seed:', seed, '| Prior YTD gross:', ytdGross.toFixed(2));
 
   return periods.map((period, idx) => {
     const earnings: PayslipEarning[] = [];
     let gross = 0;
     let overtimeComponent = 0;
 
-    if (config.payConfig.useExactPay && config.payConfig.exactPayPerPeriod > 0) {
-      const base = Math.round(config.payConfig.exactPayPerPeriod * 100) / 100;
+    if (useExactPay && exactPayPerPeriod > 0) {
+      const base = Math.round(exactPayPerPeriod * 100) / 100;
       const hoursMultiplier = config.payConfig.frequency === 'weekly' ? 1 : config.payConfig.frequency === 'fortnightly' ? 2 : 4.33;
       const hours = config.payConfig.weeklyHours * hoursMultiplier;
       const impliedRate = Math.round((base / hours) * 100) / 100;
@@ -246,21 +328,59 @@ export function generatePayslips(config: AppConfig): Payslip[] {
     const ote = gross - overtimeComponent;
 
     const annualProjection = gross * ppy;
-    const periodTax = calculatePeriodTax(annualProjection, config.payConfig.frequency);
-
-    ytdTax += periodTax;
 
     const deductions: PayslipDeduction[] = [];
-    let totalDeductions = periodTax;
+    let totalDeductions = 0;
 
-    const taxKey = 'PAYG Withholding';
-    ytdDeductions[taxKey] = (ytdDeductions[taxKey] || 0) + periodTax;
-    deductions.push({
-      description: taxKey,
-      amount: periodTax,
-      ytd: ytdDeductions[taxKey],
-      type: 'tax',
-    });
+    if (showMedicareSeparate) {
+      const periodPAYG = calculatePeriodPAYGOnly(annualProjection, config.payConfig.frequency);
+      const periodMedicare = calculatePeriodMedicare(annualProjection, config.payConfig.frequency);
+
+      ytdDeductions[taxKey] = (ytdDeductions[taxKey] || 0) + periodPAYG;
+      deductions.push({
+        description: taxKey,
+        amount: periodPAYG,
+        ytd: ytdDeductions[taxKey],
+        type: 'tax',
+      });
+      totalDeductions += periodPAYG;
+
+      const medicareKey = 'Medicare Levy';
+      ytdDeductions[medicareKey] = (ytdDeductions[medicareKey] || 0) + periodMedicare;
+      deductions.push({
+        description: medicareKey,
+        amount: periodMedicare,
+        ytd: ytdDeductions[medicareKey],
+        type: 'tax',
+      });
+      totalDeductions += periodMedicare;
+
+      ytdTax += periodPAYG + periodMedicare;
+    } else {
+      const periodTax = calculatePeriodTax(annualProjection, config.payConfig.frequency);
+      ytdDeductions[taxKey] = (ytdDeductions[taxKey] || 0) + periodTax;
+      deductions.push({
+        description: taxKey,
+        amount: periodTax,
+        ytd: ytdDeductions[taxKey],
+        type: 'tax',
+      });
+      totalDeductions += periodTax;
+      ytdTax += periodTax;
+    }
+
+    if (includeHECS) {
+      const periodHECS = calculatePeriodHECS(annualProjection, config.payConfig.frequency);
+      const hecsKey = 'HECS-HELP Repayment';
+      ytdDeductions[hecsKey] = (ytdDeductions[hecsKey] || 0) + periodHECS;
+      deductions.push({
+        description: hecsKey,
+        amount: periodHECS,
+        ytd: ytdDeductions[hecsKey],
+        type: 'tax',
+      });
+      totalDeductions += periodHECS;
+    }
 
     for (const ded of config.deductions) {
       const key = ded.description || 'Deduction';
@@ -282,7 +402,10 @@ export function generatePayslips(config: AppConfig): Payslip[] {
     ytdGross += gross;
     ytdNet += net;
 
-    const leaveOverride = config.leaveOverrides[idx] || { takenHoursAnnual: 0, takenHoursPersonal: 0 };
+    const numPayslips = config.payConfig.numberOfPayslips ?? 4;
+    const leaveOverride = (config.leaveOverrides && config.leaveOverrides[idx])
+      ? config.leaveOverrides[idx]
+      : { takenHoursAnnual: 0, takenHoursPersonal: 0 };
 
     annualLeaveBalance += annualLeavePerPeriod - leaveOverride.takenHoursAnnual;
     personalLeaveBalance += personalLeavePerPeriod - leaveOverride.takenHoursPersonal;
