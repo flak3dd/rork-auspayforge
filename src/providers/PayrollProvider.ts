@@ -10,6 +10,7 @@ import {
 } from '@/types/payroll';
 import { generatePayslips } from '@/utils/payslip';
 import { generateBankStatement } from '@/utils/bankStatement';
+import { generateSuncorpBankStatement } from '@/utils/suncorpBankStatement';
 import { isConfigValid } from '@/utils/validation';
 import { generateGeneralPayslipHTML } from '@/lib/templates/generalPayslipTemplate';
 import { generateConstructionPayslipHTML } from '@/lib/templates/constructionPayslipTemplate';
@@ -24,6 +25,11 @@ export type PayslipTemplateType = 'general' | 'construction' | 'admin' | 'execut
 function pickStatementGenerator(template: string) {
   if (template === 'suncorp') return generateSuncorpStatementHTML;
   return generateStatementHTML;
+}
+
+function pickTransactionGenerator(template: string) {
+  if (template === 'suncorp') return generateSuncorpBankStatement;
+  return generateBankStatement;
 }
 
 function generatePayslipHTML(payslip: Payslip, index: number, templateType: PayslipTemplateType): string {
@@ -169,7 +175,8 @@ export const [PayrollProvider, usePayroll] = createContextHook(() => {
     try {
       const assets = await ensureAssets();
       const payslips = output?.payslips ?? [];
-      const bankStatement: BankStatement = generateBankStatement(config, payslips);
+      const genTx = pickTransactionGenerator(config.bankConfig.statementTemplate ?? 'commbank');
+      const bankStatement: BankStatement = genTx(config, payslips);
       console.log('[PayrollProvider] Generated bank statement with', bankStatement.transactions.length, 'transactions');
 
       const genStmt = pickStatementGenerator(config.bankConfig.statementTemplate ?? 'commbank');
@@ -200,7 +207,8 @@ export const [PayrollProvider, usePayroll] = createContextHook(() => {
       const payslips: Payslip[] = generatePayslips(config);
       console.log('[PayrollProvider] Generated', payslips.length, 'payslips');
 
-      const bankStatement: BankStatement = generateBankStatement(config, payslips);
+      const genTx2 = pickTransactionGenerator(config.bankConfig.statementTemplate ?? 'commbank');
+      const bankStatement: BankStatement = genTx2(config, payslips);
       console.log('[PayrollProvider] Generated bank statement with', bankStatement.transactions.length, 'transactions');
 
       const detected = detectTemplate(config);
@@ -253,7 +261,8 @@ export const [PayrollProvider, usePayroll] = createContextHook(() => {
       },
     };
     setConfig(updatedConfig);
-    const bankStatement: BankStatement = generateBankStatement(updatedConfig, output.payslips);
+    const genTx3 = pickTransactionGenerator(updatedConfig.bankConfig.statementTemplate ?? 'commbank');
+    const bankStatement: BankStatement = genTx3(updatedConfig, output.payslips);
     const genStmt3 = pickStatementGenerator(updatedConfig.bankConfig.statementTemplate ?? 'commbank');
     const stmtHTML = genStmt3(bankStatement, updatedConfig, assets);
     setStatementHTML(stmtHTML);
