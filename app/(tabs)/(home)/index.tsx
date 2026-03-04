@@ -106,12 +106,12 @@ export default function HomeScreen() {
   const handleForgeStatement = useCallback(() => {
     console.log('[Home] Forge statement triggered');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    animatePress(scaleStatement, () => {
+    animatePress(scaleStatement, async () => {
       try {
         if (!output?.payslips || output.payslips.length === 0) {
           generatePayslipsOnly();
         }
-        generateStatementOnly();
+        await generateStatementOnly();
         router.push('/statement' as never);
       } catch (e) {
         console.error('[Home] Statement generation error:', e);
