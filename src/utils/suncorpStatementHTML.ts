@@ -5,8 +5,9 @@ function fmtAmount(n: number): string {
   return Math.abs(n).toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function fmtDate(d: Date): string {
+function fmtDate(d: Date | string): string {
   const date = new Date(d);
+  if (isNaN(date.getTime())) return String(d);
   const day = date.getDate();
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const month = months[date.getMonth()];

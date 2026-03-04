@@ -126,8 +126,10 @@ function pick<T>(arr: T[], rand: () => number): T {
   return arr[Math.floor(rand() * arr.length)];
 }
 
-function formatDate(date: Date): string {
-  return date.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
+function formatDate(date: Date | string): string {
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return String(date);
+  return d.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 function generateRefCode(rand: () => number, length: number = 12): string {
@@ -162,12 +164,12 @@ export function generateSuncorpBankStatement(config: AppConfig, payslips: Paysli
   const spanStart = hasCustomDates
     ? new Date(bc.statementStartDate)
     : hasPayslips
-      ? addDays(payslips[0].period.startDate, -7)
+      ? addDays(new Date(payslips[0].period.startDate), -7)
       : new Date();
   const spanEnd = hasCustomDates
     ? addDays(spanStart, bc.statementLength)
     : hasPayslips
-      ? addDays(payslips[payslips.length - 1].period.paymentDate, 7)
+      ? addDays(new Date(payslips[payslips.length - 1].period.paymentDate), 7)
       : addDays(spanStart, 30);
 
   console.log('[SuncorpStatement] Statement period:', formatDate(spanStart), '-', formatDate(spanEnd));

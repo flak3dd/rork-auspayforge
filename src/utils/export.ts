@@ -1,6 +1,7 @@
 import { Platform, Alert } from 'react-native';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import { documentDirectory, copyAsync } from 'expo-file-system';
 import { injectMetadataIntoHTML } from '@/utils/metadata';
 
 async function generatePDFUri(html: string): Promise<string> {
@@ -42,13 +43,17 @@ export async function saveAsPDF(html: string, filename: string, metadataClean: b
     const uri = await generatePDFUri(html);
     console.log('[Export] PDF generated at:', uri);
 
-    const fs = await import('expo-file-system');
     const safeName = filename.replace(/[^a-zA-Z0-9_-]/g, '_');
-    const destFile = new fs.File(fs.Paths.document, `${safeName}.pdf`);
+    const docDir = documentDirectory;
+    if (!docDir) {
+      console.error('[Export] Document directory not available');
+      Alert.alert('Save Error', 'Document directory is not available.');
+      return;
+    }
+    const destUri = `${docDir}${safeName}.pdf`;
 
-    const srcFile = new fs.File(uri);
-    srcFile.copy(destFile);
-    console.log('[Export] PDF saved to documents:', destFile.uri);
+    await copyAsync({ from: uri, to: destUri });
+    console.log('[Export] PDF saved to documents:', destUri);
 
     Alert.alert(
       'PDF Saved',
@@ -61,7 +66,7 @@ export async function saveAsPDF(html: string, filename: string, metadataClean: b
             try {
               const canShare = await Sharing.isAvailableAsync();
               if (canShare) {
-                await Sharing.shareAsync(destFile.uri, {
+                await Sharing.shareAsync(destUri, {
                   UTI: '.pdf',
                   mimeType: 'application/pdf',
                   dialogTitle: `Share ${safeName}.pdf`,

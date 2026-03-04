@@ -9,8 +9,10 @@ function fmtAmount(n: number): string {
   return Math.abs(n).toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function fmtDate(d: Date): string {
-  return new Date(d).toLocaleDateString('en-AU', { day: '2-digit', month: 'short' });
+function fmtDate(d: Date | string): string {
+  const date = new Date(d);
+  if (isNaN(date.getTime())) return String(d);
+  return date.toLocaleDateString('en-AU', { day: '2-digit', month: 'short' });
 }
 
 function txRow(tx: BankTransaction): string {

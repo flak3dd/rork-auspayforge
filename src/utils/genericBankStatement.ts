@@ -19,8 +19,10 @@ function pick<T>(arr: T[], rand: () => number): T {
   return arr[Math.floor(rand() * arr.length)];
 }
 
-function formatDate(date: Date): string {
-  return date.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
+function formatDate(date: Date | string): string {
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return String(date);
+  return d.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 function generateRefCode(rand: () => number, length: number = 12): string {
@@ -232,12 +234,12 @@ export function generateGenericBankStatement(config: AppConfig, payslips: Paysli
   const spanStart = bc.statementStartDate
     ? new Date(bc.statementStartDate)
     : payslips.length > 0
-      ? addDays(payslips[0].period.startDate, -7)
+      ? addDays(new Date(payslips[0].period.startDate), -7)
       : new Date();
   const spanEnd = bc.statementLength
     ? addDays(spanStart, bc.statementLength)
     : payslips.length > 0
-      ? addDays(payslips[payslips.length - 1].period.paymentDate, 7)
+      ? addDays(new Date(payslips[payslips.length - 1].period.paymentDate), 7)
       : addDays(spanStart, 30);
 
   let balance = bc.openingBalance;
