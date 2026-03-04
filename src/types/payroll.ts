@@ -48,6 +48,7 @@ export interface Allowance {
 }
 
 export type TransactionDensity = 'low' | 'medium' | 'high';
+export type StatementTemplate = 'commbank' | 'suncorp';
 
 export interface BankConfig {
   bsb: string;
@@ -74,6 +75,7 @@ export interface BankConfig {
   incomingTransferMax: number;
   debitCreditRatio: number;
   suburbs: [string, string, string];
+  statementTemplate: StatementTemplate;
 }
 
 export interface LeaveOverride {
@@ -225,6 +227,7 @@ export const DEFAULT_CONFIG: AppConfig = {
     incomingTransferMax: 560,
     debitCreditRatio: 0.5,
     suburbs: ['CABOOLTURE', 'MORAYFIELD', 'BURPENGARY'],
+    statementTemplate: 'commbank',
   },
   leaveOverrides: [
     { takenHoursAnnual: 0, takenHoursPersonal: 0 },

@@ -40,13 +40,14 @@ import {
   EyeOff,
   MapPin,
   Building2,
+  FileStack,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { usePayroll } from '@/providers/PayrollProvider';
 import HTMLRenderer from '@/components/HTMLRenderer';
 import { exportHTMLToPDF } from '@/utils/export';
-import type { TransactionDensity } from '@/types/payroll';
+import type { TransactionDensity, StatementTemplate } from '@/types/payroll';
 
 function fmt(n: number): string {
   return Math.abs(n).toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -168,6 +169,7 @@ export default function StatementScreen() {
   const [mortgageRentDay, setMortgageRentDay] = useState<string>(String(config.bankConfig.mortgageRentDay ?? 1));
   const [mortgageRentTransactionName, setMortgageRentTransactionName] = useState<string>(config.bankConfig.mortgageRentTransactionName ?? '');
   const [showLocationSettings, setShowLocationSettings] = useState<boolean>(false);
+  const [statementTemplate, setStatementTemplate] = useState<StatementTemplate>(config.bankConfig.statementTemplate ?? 'commbank');
 
   const [isRegenerating, setIsRegenerating] = useState<boolean>(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -223,6 +225,7 @@ export default function StatementScreen() {
         incomingTransferMax: parseFloat(incomingTransferMax) || 560,
         debitCreditRatio,
         suburbs: [suburb1.trim() || 'CABOOLTURE', suburb2.trim() || 'MORAYFIELD', suburb3.trim() || 'BURPENGARY'],
+        statementTemplate,
         includeMortgageRent,
         mortgageRentAmount: parseFloat(mortgageRentAmount) || 1800,
         mortgageRentLabel,
@@ -368,6 +371,75 @@ export default function StatementScreen() {
           <View style={styles.periodBar}>
             <CalendarRange size={14} color={Colors.textSecondary} />
             <Text style={styles.periodText}>{statement.statementPeriod}</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Statement Template */}
+      <View style={styles.settingsCard}>
+        <TouchableOpacity
+          style={styles.settingsHeader}
+          onPress={() => Haptics.selectionAsync()}
+          activeOpacity={1}
+        >
+          <View style={styles.settingsHeaderLeft}>
+            <View style={[styles.settingsIconWrap, { backgroundColor: 'rgba(251,191,36,0.15)' }]}>
+              <FileStack size={16} color={Colors.warning} />
+            </View>
+            <View>
+              <Text style={styles.settingsTitle}>Statement Template</Text>
+              <Text style={styles.settingsSubtitle}>Bank brand & layout</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+        <View style={styles.settingsBody}>
+          <View style={styles.templatePicker}>
+            <TouchableOpacity
+              style={[
+                styles.templateOption,
+                statementTemplate === 'commbank' && styles.templateOptionActive,
+              ]}
+              onPress={() => {
+                setStatementTemplate('commbank');
+                Haptics.selectionAsync();
+              }}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.templateDot, { backgroundColor: '#FFCC00' }]} />
+              <View style={styles.templateOptionContent}>
+                <Text style={[
+                  styles.templateOptionLabel,
+                  statementTemplate === 'commbank' && styles.templateOptionLabelActive,
+                ]}>CommBank</Text>
+                <Text style={[
+                  styles.templateOptionDesc,
+                  statementTemplate === 'commbank' && styles.templateOptionDescActive,
+                ]}>Smart Access</Text>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.templateOption,
+                statementTemplate === 'suncorp' && styles.templateOptionActive,
+              ]}
+              onPress={() => {
+                setStatementTemplate('suncorp');
+                Haptics.selectionAsync();
+              }}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.templateDot, { backgroundColor: '#004B87' }]} />
+              <View style={styles.templateOptionContent}>
+                <Text style={[
+                  styles.templateOptionLabel,
+                  statementTemplate === 'suncorp' && styles.templateOptionLabelActive,
+                ]}>Suncorp</Text>
+                <Text style={[
+                  styles.templateOptionDesc,
+                  statementTemplate === 'suncorp' && styles.templateOptionDescActive,
+                ]}>Everyday Basics</Text>
+              </View>
+            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -1832,5 +1904,49 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: Colors.border,
     gap: 12,
+  },
+  templatePicker: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  templateOption: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    backgroundColor: Colors.cardElevated,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+  },
+  templateOptionActive: {
+    borderColor: Colors.accent,
+    backgroundColor: Colors.accentDim,
+  },
+  templateDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  templateOptionContent: {
+    flex: 1,
+  },
+  templateOptionLabel: {
+    fontSize: 14,
+    fontWeight: '700' as const,
+    color: Colors.textMuted,
+  },
+  templateOptionLabelActive: {
+    color: Colors.accent,
+  },
+  templateOptionDesc: {
+    fontSize: 11,
+    color: Colors.textMuted,
+    marginTop: 1,
+  },
+  templateOptionDescActive: {
+    color: Colors.accent + 'AA',
   },
 });
